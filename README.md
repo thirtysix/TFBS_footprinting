@@ -2,10 +2,10 @@ TFBS_footprinting
 =================
 Pipeline: Identification of cis-regulatory elements by matrix scoring and conservation.
 
-## Purpose:
+## Purpose
 The goal of this script is to provide a pipeline for the transcription factor binding site (TFBS) footprinting method.
 
-## Input:
+## Input
 - Dictionary of: {transcript_id : Ensembl_transcript_id}
 - Gene symbol (e.g. 'CA1')
 - Dinucleotide TFBS position frequency matrix dictionary as JSON file (PFM) (output from x.py)
@@ -14,9 +14,11 @@ The goal of this script is to provide a pipeline for the transcription factor bi
 - Ensembl species group designation (e.g. mammals)
 - Phylogenetic footprinting predictions from Bigfoot program (optional, run separately)
 - Statistical alignment of orthologous sequences from Bigfoot program (optional, run separately)
+- Ist.medisapiens.com tissue coexpression tables (optional)
 - Various score thresholds
 
-## Process:
+
+## Process
 Iterate through each transcript in the dictionary and:
  1. Retrieve EPO (Enredo-Pecan-Ortheus) aligned orthologous sequences from Ensembl database (determined by species group designation) corresponding to 1000 nt upstream of transcript
  2. Edit retrieved alignment:
@@ -30,7 +32,7 @@ Iterate through each transcript in the dictionary and:
  6. Identify predicted/matched human TFBSs conserved across multiple species
  7. For each conserved (human and 1+ additional species) TFBS, generate 'combined affinity score' as a sum of position weight scores across species
 
-## Output:
+## Output
 - Figure showing 10 highest scoring (combined affinity score) TFBSs mapped onto human promoter
 - CSV table file for each transcript with all predicted binding sites for all species
 - CSV table file for each transcript with conserved binding sites (human and 1+ additional species)
