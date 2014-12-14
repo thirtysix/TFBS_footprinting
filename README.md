@@ -39,3 +39,9 @@ Iterate through each transcript in the dictionary and:
 - FASTA file of 1,000 nucleotide (nt) EPO alignment
 - JSON file of dictionary of predicted TFBSs
 
+## Dependencies
+- Currently only tested on Linux
+- Python 2.7
+- Biopython (http://biopython.org/wiki/Download#Installation_Instructions)
+- clustalo `sudo apt-get install clustalo`
+- matplotlib `sudo apt-get install python-matplotlib`
