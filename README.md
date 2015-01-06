@@ -45,3 +45,10 @@ Iterate through each transcript in the dictionary and:
 - Biopython (http://biopython.org/wiki/Download#Installation_Instructions)
 - clustalo `sudo apt-get install clustalo`
 - matplotlib `sudo apt-get install python-matplotlib`
+
+## Usage
+ 1. Download TFBS_footprinting git project files to same directory.
+ 2. Download 'sites' folder from 'http://jaspar.genereg.net/html/DOWNLOAD/' to current directory.
+ 3. Execute sites2dfm.py to create di-nucleotide frequency matrices and corresponding .json output files.
+ 4. Execute convert_jaspar_matrix.py to create mono-nucleotide frequency matrices and corresponding .json output file from 'pfm_vertebrates.txt'.
+ 5. Edit 'Variables/Thresholds/Input' section of TFBS_analyzer_dinuc.py' and execute.
