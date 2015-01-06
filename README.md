@@ -7,10 +7,9 @@ The goal of these scripts is to provide a pipeline for the transcription factor 
 
 ## Input
 - Dictionary of: {transcript_id : Ensembl_transcript_id}
-- Gene symbol (e.g. 'CA1')
-- Di-nucleotide TFBS position frequency matrix dictionary as JSON file (PFM) (output from x.py)
-- Mono-nucleotide TFBS PFM dictionary as JSON file (output from x.py)
-- Dictionary of unique TFBSs for each TF as JSON file (output from x.py)
+- Di-nucleotide TFBS position frequency matrix dictionary as JSON file (PFM) (output from 'sites2dfm.py')
+- Mono-nucleotide TFBS PFM dictionary as JSON file (output from 'convert_jaspar_matrix.py')
+- Dictionary of unique TFBSs for each TF as JSON file (output from 'sites2dfm.py')
 - Ensembl species group designation (e.g. mammals)
 - Phylogenetic footprinting predictions from Bigfoot program (optional, run separately)
 - Statistical alignment of orthologous sequences from Bigfoot program (optional, run separately)
