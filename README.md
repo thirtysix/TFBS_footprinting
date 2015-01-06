@@ -12,14 +12,14 @@ The goal of these scripts is to provide a pipeline for the transcription factor 
 - Dictionary of unique TFBSs for each TF as JSON file (output from 'sites2dfm.py')
 - Ensembl species group designation (e.g. mammals)
 - Phylogenetic footprinting predictions from Bigfoot program (optional, run separately)
-- Statistical alignment of orthologous sequences from Bigfoot program (optional, run separately)
+- Statistical alignment of orthologous sequences from Bigfoot program (optional, run separately).  If not provided, the Enredo-Pecan-Ortheus (EPO) alignment from Ensembl is used, and a raw basic conservation score is generated.
 - Ist.medisapiens.com tissue coexpression tables (optional)
 - Various score thresholds
 
 
 ## Process
 Iterate through each transcript in the dictionary and:
- 1. Retrieve EPO (Enredo-Pecan-Ortheus) aligned orthologous sequences from Ensembl database (determined by species group designation) corresponding to 1000 nt upstream of transcript
+ 1. Retrieve EPO aligned orthologous sequences from Ensembl database (determined by species group designation) corresponding to 1000 nt upstream of transcript
  2. Edit retrieved alignment:
 - Remove sequences that are less than 75% length of human sequence
 - Replace characters not corresponding to nucleotides (ACGT), with gaps
