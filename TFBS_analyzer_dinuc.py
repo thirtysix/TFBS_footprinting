@@ -1094,7 +1094,7 @@ non_dinuc_mammal_TFBSs = non_dinuc_mammal_json['non_dinuc_mammal_TFBSs']
 
 # target Ensembl transcripts
 # e.g. transcripts_dict = {'CA12-001':'ENST00000178638', 'CA12-002':'ENST00000344366', 'CA12-003':'ENST00000422263'}
-transcripts_dict = {'CA1-001':'ENST00000523953', 'CA1-202':'ENST00000542576', 'CA1-201':'ENST00000431316', 'CA1-003':'ENST00000523022'}
+transcripts_dict = {}
 
 # length of promoter to analyze
 promoter_len = 1000
