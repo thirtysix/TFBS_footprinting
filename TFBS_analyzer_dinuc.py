@@ -958,8 +958,8 @@ def output_greatest_hits(greatest_hits_sorted, correlation_folder, top_folder_na
 
     # retrieve any correlation files in the correlations folder
     if os.path.isdir(correlation_folder):
-        correlation_files_high = [correlation_folder_name+f for f in os.listdir(correlation_folder_name) if os.path.isfile(correlation_folder_name+f) and 'high' in f and "~" not in f]
-        correlation_files_low = [correlation_folder_name+f for f in os.listdir(correlation_folder_name) if os.path.isfile(correlation_folder_name+f) and 'low' in f and "~" not in f]
+        correlation_files_high = [correlation_folder+f for f in os.listdir(correlation_folder) if os.path.isfile(correlation_folder+f) and 'high' in f and "~" not in f]
+        correlation_files_low = [correlation_folder+f for f in os.listdir(correlation_folder) if os.path.isfile(correlation_folder+f) and 'low' in f and "~" not in f]
         correlation_files = correlation_files_high + correlation_files_low
 
         # Extract correlation values for each (target_protein-TF) pair for each tissue correlation file in './correlations'    
@@ -983,7 +983,7 @@ def output_greatest_hits(greatest_hits_sorted, correlation_folder, top_folder_na
                 n = n_series[0]
             else:
                 n = 'lookup'
-            file_name = correlation_file.replace(correlation_folder_name,"")
+            file_name = correlation_file.replace(correlation_folder,"")
             corr_header = file_name.split(".")[1]
             corr_header = corr_header + '(' + str(n) + ')'
             header_row.append(corr_header)
@@ -1094,8 +1094,7 @@ non_dinuc_mammal_TFBSs = non_dinuc_mammal_json['non_dinuc_mammal_TFBSs']
 
 # target Ensembl transcripts
 # e.g. transcripts_dict = {'CA12-001':'ENST00000178638', 'CA12-002':'ENST00000344366', 'CA12-003':'ENST00000422263'}
-transcripts_dict = {} 
-
+transcripts_dict = {'CA1-001':'ENST00000523953', 'CA1-202':'ENST00000542576', 'CA1-201':'ENST00000431316', 'CA1-003':'ENST00000523022'}
 
 # length of promoter to analyze
 promoter_len = 1000
@@ -1119,7 +1118,7 @@ num_TFs_to_include = 10
 bigfoot_pred_infile = ""
 
 # (OPTIONAL) if expression correlation files have been retrieved from ist.medisapiens.com
-correlation_folder = "./correlations"
+correlation_folder = "./correlations/"
 
 ################################################################################
 # Process ######################################################################
@@ -1171,5 +1170,6 @@ for transcript_id, transcript in transcripts_dict.iteritems():
     plot_promoter(identifier, transcript_id, top_x_greatest_hits, greatest_hits_sorted, current_strand_threshold, promoter_len, top_folder_name_input, ".cluster.overlap.", num_TFs_to_include, converted_reg_dict, conservation, cpg_list)
     plot_promoter(identifier, transcript_id, top_x_greatest_hits_no_overlap, greatest_hits_sorted, current_strand_threshold, promoter_len, top_folder_name_input, ".cluster.NO_overlap.", num_TFs_to_include, converted_reg_dict, conservation, cpg_list)
     x_greatest_hits_table_writer(top_x_greatest_hits, True, top_folder_name_input, ".cluster.")
-    x_greatest_hits_table_writer(top_x_greatest_hits_no_overlap, False, top_folder_name_input, ".cluster")
+    x_greatest_hits_table_writer(top_x_greatest_hits_no_overlap, False, top_folder_name_input, ".cluster.")
     output_greatest_hits(greatest_hits_sorted, correlation_folder, top_folder_name_input, ".cluster.", transcript_id)
+    dump_json('./cluster_dict.json', cluster_dict)
