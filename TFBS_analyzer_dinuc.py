@@ -25,7 +25,14 @@ import itertools
 # To-Do List ###################################################################
 ################################################################################
 # Add TSS location referencing for clarity
-# Change TBP threshold, 'human_threshold' for cleanliness 
+# Change TBP threshold, 'human_threshold' for cleanliness
+# Make process accept any species as default for analysis *not just human
+# Include match likelihood.
+# Adjust sequence correction to look for completeness using graded threshold
+## depending on distance from TSS
+# Add absolute chromosome locations for reproducibility
+# make random seq generator automatically choose cutoff based on input number of
+##random seqs
 
 
 
@@ -149,7 +156,8 @@ def retrieve_genome_aligned(transcript_dict,
                             promoter_len,
                             species_group,
                             target_species):
-    """Takes as input human CCDS start position and size of promoter to be extracted.  Retrieves genome aligned, corresponding regions in all orthologs."""    
+    """Takes as input human CCDS start position and size of promoter to be extracted.  Retrieves genome aligned,
+    corresponding regions in all orthologs."""
 
     # Retrieve alignment if alignment FASTA does not already exist  
     query_type = "/alignment/block/region/"
@@ -178,22 +186,45 @@ def load_genome_aligned(aligned_file_name):
     return alignment
 
 
+##def selective_alignment(alignment):
+##    """Remove sequences from the alignment if they have less then 75% of the nucleotides of the human sequence."""
+##    human_seq = alignment[0]['seq']
+##    human_seq_len = len(human_seq.replace("-","").replace(" ",""))
+##    cleaned_alignment = []
+##    for entry in alignment:    
+##        entry_seq = entry['seq'].replace("-","").replace("N","").replace(" ","").replace(".","")      
+##        entry_seq_len = len(entry_seq)
+##        if float(entry_seq_len)/human_seq_len >= 0.75:
+##            cleaned_alignment.append(entry)
+##
+##        if float(entry_seq_len)/human_seq_len >= 0.75:
+##            cleaned_alignment.append(entry)
+##        else:
+##            print entry['species'], "removed from alignment"
+##
+##    return cleaned_alignment
+
+
 def selective_alignment(alignment):
     """Remove sequences from the alignment if they have less then 75% of the nucleotides of the human sequence."""
-    human_seq = alignment[0]['seq']
-    human_seq_len = len(human_seq.replace("-","").replace(" ",""))
+    human_entry = alignment[0]
+    human_seq_2nd_half = human_entry['seq'][len(human_entry['seq'])/2:]
+    human_seq_2nd_half = human_seq_2nd_half.replace("-","").replace("N","").replace(" ","").replace(".","")
+    human_seq_2nd_half_len = len(human_seq_2nd_half)
+    print human_seq_2nd_half_len
+
     cleaned_alignment = []
     for entry in alignment:
-        entry_seq = entry['seq'].replace("-","").replace("N","").replace(" ","").replace(".","")
-        
-        entry_seq_len = len(entry_seq)
-        if float(entry_seq_len)/human_seq_len >= 0.75:
+        entry_seq_2nd_half = entry['seq'][len(entry['seq'])/2:]
+        entry_seq_2nd_half = entry_seq_2nd_half.replace("-","").replace("N","").replace(" ","").replace(".","")      
+        entry_seq_2nd_half_len = len(entry_seq_2nd_half)
+        print entry['species'], entry_seq_2nd_half_len
+        if float(entry_seq_2nd_half_len)/human_seq_2nd_half_len >= 0.75:
             cleaned_alignment.append(entry)
         else:
             print entry['species'], "removed from alignment"
 
     return cleaned_alignment
-
 
 def find_complexity_beginning(alignment):
     """Determine first position where more than 50% of sequences are non-gap"""
@@ -310,15 +341,50 @@ def retrieve_regulatory(chromosome,
 ################################################################################
 # TFBS Prediction ##############################################################
 ################################################################################
-def generate_xk_random_seqs():
-    """generate random sequences for thresholding a PWM"""
+def generate_xk_random_seqs(thresholding_sample_size):
+    """generate random sequences for thresholding a PWM
+    0 1
+    1 4
+    2 16
+    3 64
+    4 256
+    5 1024
+    6 4096
+    7 16384
+    8 65536
+    9 262144
+    10 1048576
+    11 4194304
+    12 16777216
+    13 67108864
+    14 268435456
+    15 1073741824
+    16 4294967296
+    17 17179869184
+    18 68719476736
+    19 274877906944
+    20 1099511627776
+    21 4398046511104
+    22 17592186044416
+    23 70368744177664
+    24 281474976710656
+"""
+    complete_threshold = 0
+    powers_dict = {}
+    for i in range(22):
+        uniques = 4**i
+        powers_dict[i] = uniques
+        if uniques <= thresholding_sample_size:
+            complete_threshold = i
+            
+    
     start_time = time.time()
     random_seqs_dict = {}
     for i in range(4, 22):
         print i
         random_seqs = []
         # there are 65536 unique sequences of length 8 nt.
-        if i < 7:
+        if i <= complete_threshold:
             random_seqs = ["".join(nuc) for nuc in itertools.product("ACGT", repeat=i)]
             random_seqs_dict[i] = random_seqs
 
@@ -330,7 +396,7 @@ def generate_xk_random_seqs():
 ##            
 ##        # 14 and longer are generated directly to 100000 length
         else:
-            while len(random_seqs)<20000:
+            while len(random_seqs) < thresholding_sample_size:
                 random_seq = "".join(random.choice("ACGT") for _ in range(i))
                 random_seqs.append(random_seq)
             random_seqs_dict[i] = random_seqs        
@@ -338,7 +404,7 @@ def generate_xk_random_seqs():
     print "total_time", end_time - start_time
     return random_seqs_dict
 
-random_seqs_dict = generate_xk_random_seqs()
+
 
 
 def test_PWM(pwm, pwm_dict, pwm_type, random_seqs_dict, pvalue):
@@ -357,7 +423,7 @@ def test_PWM(pwm, pwm_dict, pwm_type, random_seqs_dict, pvalue):
         random_score = PWM_scorer(random_seq, pwm, pwm_dict, pwm_type)
         random_scores.append(random_score)
 
-    # sort list of random scores and choose the top 20th as the cutoff score value
+    # sort list of random scores and choose the top % as the cutoff score value
     random_scores.sort()
     cutoff_index = -1 * int(len(random_seqs) * pvalue)
     cutoff_score = random_scores[cutoff_index]
@@ -495,7 +561,7 @@ def TFBS_finder(alignment,
     if os.path.isfile(TFBSs_found_dict_outfile_name):
         print "TFBSs_found_dict already exists: loading"
         TFBSs_found_dict = load_json(TFBSs_found_dict_outfile_name)
-
+    
     # Build a PWM
     else:
         TFBSs_found_dict = {}
@@ -586,7 +652,8 @@ def TFBS_finder(alignment,
                         # retain frames that are above some threshold, and add to table.
                         if current_frame_ratio >= lowest_sites_score_ratio:
                             current_frame_adjusted_score = current_frame_ratio * current_frame_score
-
+##                            alignment_ratio = 
+                            
                             # convert hit location in sequence to position relative to TSS
                             if strand == "+1":
                                 hit_loc_start = i
@@ -781,7 +848,8 @@ def TFBSs_in_alignment(TFBSs_found_dict,
     # sort the hits for each promoter list within the promoter dictionary by position in the alignment###
     for TF, value in TFBSs_found_dict.iteritems():
         try:
-            TFBSs_found_dict_sorted[TF] = sorted(value, key = itemgetter(12))
+##            TFBSs_found_dict_sorted[TF] = sorted(value, key = itemgetter(12))
+            TFBSs_found_dict_sorted[TF] = sorted(value, key = itemgetter(11))
         except:
             print "DANGER WILL ROBINSON, THAR BE SHORTNESS HERE", TF, value
     
@@ -1150,7 +1218,9 @@ def plot_promoter(identifier,
             reg_height += 0.5
             
                             
-    # Conservation plot  
+    # Conservation plot
+    print len(range(-1 * alignment_len + promoter_after_TSS, promoter_after_TSS))
+    print len(conservation)
     ax2.plot(range(-1 * alignment_len + promoter_after_TSS, promoter_after_TSS), conservation, color='0.55')
     
     # CpG plot
@@ -1166,8 +1236,14 @@ def plot_promoter(identifier,
         if x[2] == 0:
             gpc.append(x[2])
         else:
-            gpc.append(top_obs2exp)
+            if top_obs2exp <= 1:
+                gpc.append(1)
+            else:
+                gpc.append(top_obs2exp)
+
+    ax3.set_yticks(range(0,2))
     ax3.bar(range(-1 * alignment_len + promoter_after_TSS, promoter_after_TSS), gpc, color = 'black')
+
        
     # Find the highest y value to set y-axis height
     y_range.sort()
@@ -1185,7 +1261,7 @@ def plot_promoter(identifier,
     ax1.axhline(0, color = 'black')
     ax1.set_ylabel("Number of supporting motifs", labelpad = 0)
     if tens_y < 3:
-        ax1.set_yticks(range(-30, 31, 10))
+        ax1.set_yticks(range(-40, 41, 10))
     else:
         ax1.set_yticks(range(-1 * ((tens_y+1)*10), ((tens_y+1)*10)+1, 10))
     title_str = transcript_id + " Predicted TFBSs"
@@ -1288,17 +1364,35 @@ def TF_name_cleaner(jaspar_TF):
         
     return cleaned_list
 
+def average_bigfootprint(conservation, start, end, promoter_before_TSS):
+    """Calculate the average bigfoot/conservation score over the length
+    of the predicted TFBS.
+    """
+    conservation_start = promoter_before_TSS + start
+    conservation_end = promoter_before_TSS + end
+    TFBS_range = conservation[conservation_start:conservation_end]
+    TFBS_conservation_sum = sum(TFBS_range)
+    
+    if TFBS_conservation_sum > 0:
+        TFBS_conservation_avg = TFBS_conservation_sum/len(TFBS_range)
+    else:
+        TFBS_conservation_avg = 0
 
+    return TFBS_conservation_avg
+
+    
 def output_greatest_hits(greatest_hits_sorted,
                          correlation_folder,
                          top_folder_name_input,
                          name,
-                         transcript_id):
+                         transcript_id,
+                         conservation,
+                         alignment):
     """Create an output table containing TFBSs sorted by combined affinity score.
     Any tissue specific MediSapiens correlation files present in the 'correlations' folder will be parsed.
     Correlations between the target gene and predicted TFBSs are included in the table.
     """
-    header_row = ['binding_prot', 'start', 'end', 'score', 'support', 'strand', 'combined affinity score', 'score ratio', 'motif', 'human match', 'matches']
+    header_row = ['binding_prot', 'start', 'end', 'score', 'support', 'strand', 'combined affinity score', 'dwm score ratio', 'motif', 'human match', 'species matches', 'conservation avg', 'combined affinity ratio']
     # create a new list which has a unique entry for each TF in combo TFBSs
     # these adjacent but separate entries will need to be regrouped in the output table
     output_greats = []
@@ -1311,6 +1405,23 @@ def output_greatest_hits(greatest_hits_sorted,
             output_great[0] = TF
             output_greats.append(output_great)
 
+    # add average conservation to each greatest hit
+    for output_great in output_greats:
+        start = output_great[1]
+        end = output_great[2]
+        TFBS_conservation_avg = average_bigfootprint(conservation, start, end, promoter_before_TSS)
+        output_great.append(TFBS_conservation_avg)
+
+    # add affinity ratio to each greatest hit
+    for output_great in output_greats:
+        combined_affinity_score = output_great[6]
+        human_score = output_great[3]
+        score_ratio = output_great[7]
+        best_possible_human_score = human_score/score_ratio
+        best_possible_alignment_score = best_possible_human_score * len(alignment)
+        overall_ratio = combined_affinity_score/best_possible_alignment_score
+        output_great.append(overall_ratio)
+        
     # retrieve any correlation files in the correlations folder
     if os.path.isdir(correlation_folder):
         correlation_files_high = [correlation_folder+f for f in os.listdir(correlation_folder) if os.path.isfile(correlation_folder+f) and 'high' in f and "~" not in f]
@@ -1325,6 +1436,7 @@ def output_greatest_hits(greatest_hits_sorted,
             for output_great in output_greats:
                 TF = output_great[0].lower()
                 if TF in medisapiens_dict:
+                    
                     medisapiens_corr = medisapiens_dict[TF][1]
                     medisapiens_corr = medisapiens_dict[TF][3]
                     medisapiens_n = medisapiens_dict[TF][5]
@@ -1440,52 +1552,47 @@ def CpG(aligned_file_name):
 # Variables/Thresholds/Input ###################################################
 ################################################################################
 # load mono-nuc PFMs
-TFBS_matrix_file_name = './TFBS_matrix.json'
+TFBS_matrix_file_name = '/home/harlan/Dropbox/dinucleotide_weight/ensembl_ccds_csc/testing/cas/dinuc_caps/TFBS_matrix.json'
 TFBS_matrix_dict = load_json(TFBS_matrix_file_name)
 
 # PFMs for each dinuc TF
-dinuc_TFBS_matrix_dict = load_json('./dinucleotide_TFBS_PFM.json')
+dinuc_TFBS_matrix_dict = load_json('/home/harlan/Dropbox/dinucleotide_weight/ensembl_ccds_csc/testing/cas/dinuc_caps/dinucleotide_TFBS_PFM.json')
 
 # Unique sites for each dinuc TF
-dinuc_TFBS_cleaned_sites_dict = load_json('./cleaned_Jaspar_sites.json')
+dinuc_TFBS_cleaned_sites_dict = load_json('/home/harlan/Dropbox/dinucleotide_weight/ensembl_ccds_csc/testing/cas/dinuc_caps/cleaned_Jaspar_sites.json')
 dinuc_TFBS_cleaned_sites_dict_set = cleaned_sites_dict2sets(dinuc_TFBS_cleaned_sites_dict)
 
 # names of TFs for which there is no site data, only PFM
-non_dinuc_mammal_json = load_json('./non_dinuc_mammal_TFBSs.json')
+non_dinuc_mammal_json = load_json('/home/harlan/Dropbox/dinucleotide_weight/ensembl_ccds_csc/testing/cas/dinuc_caps/non_dinuc_mammal_TFBSs.json')
 non_dinuc_mammal_TFBSs = non_dinuc_mammal_json['non_dinuc_mammal_TFBSs']
 
 # target Ensembl transcripts
 # e.g. transcripts_dict = {'CA12-001':'ENST00000178638', 'CA12-002':'ENST00000344366', 'CA12-003':'ENST00000422263'}
-transcripts_dict = {'CA1-001':'ENST00000523953','CA1-003':'ENST00000523022','CA1-201':'ENST00000431316','CA1-202':'ENST00000542576','CA10-001':'ENST00000442502','CA10-003':'ENST00000285273','CA10-006':'ENST00000451037','CA11-001':'ENST00000084798','CA12-001':'ENST00000178638','CA12-002':'ENST00000344366','CA13-001':'ENST00000321764','CA14-001':'ENST00000369111','CA2-001':'ENST00000285379','CA3-001':'ENST00000285381','CA4-001':'ENST00000300900','CA5A-001':'ENST00000309893','CA5B-005':'ENST00000318636','CA5B-201':'ENST00000454127','CA6-001':'ENST00000377443','CA6-005':'ENST00000377436','CA7-001':'ENST00000338437','CA7-002':'ENST00000394069','CA8-001':'ENST00000317995','CA9-001':'ENST00000378357', 'CA9-201':'ENST00000617161'}
-
-transcripts_dict = {'CA1-001':'ENST00000523953'}
-transcripts_dict = {'ALAS2-006':'ENST00000330807', 'ALAS2-008':'ENST00000335854', 'EPB42-001':'ENST00000300215'}
-transcripts_dict = {"CA12-001":"ENST00000178638", "CA12-002":"ENST00000344366"}
-transcripts_dict = {'RP9-001':'ENST00000297157', 'NAPEPLD-001':'ENST00000341533', 'NAPEPLD-004':'ENST00000465647'}
-transcripts_dict = {'RET-001':'ENST00000355710'}
-transcripts_dict = {"CA12-001":"ENST00000178638", "CA12-002":"ENST00000344366"}
-transcripts_dict = {'CA1-001':'ENST00000523953','CA1-003':'ENST00000523022','CA1-201':'ENST00000431316','CA1-202':'ENST00000542576'}
+transcripts_dict = {'CA1-003':'ENST00000523022', 'CA1-015':'ENST00000517618', 'CA2-001':'ENST00000285379', 'CA3-001':'ENST00000285381', 'CA7-001':'ENST00000338437', 'CA7-002':'ENST00000394069', 'CA13-001':'ENST00000321764'}
+transcripts_dict = {'CA1-003':'ENST00000523022'}
 transcripts_dict = {'CA1-015':'ENST00000517618'}
-transcripts_dict = {'CA2-001':'ENST00000285379', 'CA3-001':'ENST00000285381', 'CA7-001':'ENST00000338437', 'CA7-002':'ENST00000394069'}
 transcripts_dict = {'CA2-001':'ENST00000285379'}
 transcripts_dict = {'CA3-001':'ENST00000285381'}
+transcripts_dict = {'CA7-001':'ENST00000338437'}
+
 transcripts_dict = {'CA13-001':'ENST00000321764'}
-transcripts_dict = {'CA1-015':'ENST00000517618'}
-transcripts_dict = {'CA1-001':'ENST00000523953','CA1-003':'ENST00000523022','CA1-201':'ENST00000431316','CA1-202':'ENST00000542576'}
-transcripts_dict = {'CA1-003':'ENST00000523022'}
+transcripts_dict = {'c9orf72-201':'ENST00000619707', 'c9orf72-001':'ENST00000380003','c9orf72-005':'ENST00000379995', 'c9orf72-003':'ENST00000379997'}
+
 # length of promoter to analyze
-promoter_len = 1000
 promoter_before_TSS = 900
 promoter_after_TSS = 100
+promoter_len = promoter_before_TSS + promoter_after_TSS
 
 # Ensembl species group (http://rest.ensembl.org/documentation/info/compara_species_sets)
 # (e.g. "fish", "sauropsids", "mammals", "primates")
 species_group = "mammals"
 target_species = "homo_sapiens"
 
-# pvalue threshold
-pvalue = 0.001
+# random DNA seqs to generate
+thresholding_sample_size = 100000
 
+# pvalue threshold for accepting predicted TFBSs
+pvalue = 0.01
 
 # threshold for accepting predicted TFBSs present only in mono-nucleotide format
 # (currently only TATA-Binding Protein (TBP))
@@ -1498,17 +1605,18 @@ current_strand_threshold = 2
 # number of TFs to include in greatest hits list and subsequent graph
 num_TFs_to_include = 10
 
-# (OPTIONAL) if bigfoot program has been used and produced phylogenetic footprinting values
-bigfoot_pred_infile = ""
+# (OPTIONAL) if bigfoot program has been used and produced phylogenetic footprinting values (.pred file)
+bigfoot_pred_infile = "/home/harlan/Dropbox/manuscripts/cytoplasmic_paper/6. Algorithms for Molecular Biology/results/CA13-001_ENST00000321764_mammals/cleaned_alignment.fasta.pred"
 
 # (OPTIONAL) if expression correlation files have been retrieved from ist.medisapiens.com
-correlation_folder = "./correlations/"
+correlation_folder = "./ca7-correlations/"
 
 
 ################################################################################
 # Process ######################################################################
 ################################################################################
 total_start_time = time.time()
+
 completed_transcripts_log_filename = './completed_transcripts'
 if os.path.isfile(completed_transcripts_log_filename):
     completed_transcripts_log = load_json(completed_transcripts_log_filename)
@@ -1523,6 +1631,9 @@ curdir = os.getcwd()
 ##    transcript_id = lowest_dir.split('_')[0]
 ##    transcript = lowest_dir.split('_')[1]
 
+# generate random seqs for thresholding
+random_seqs_dict = generate_xk_random_seqs(thresholding_sample_size)
+
 for transcript_id, transcript in transcripts_dict.iteritems():
     start_time = time.time()
     print transcript_id, transcript
@@ -1536,10 +1647,12 @@ for transcript_id, transcript in transcripts_dict.iteritems():
     
     # retrieve transcript data (positions) and alignment
     if not os.path.isfile(ensembl_aligned_file_name):
-        transcript_dict, chromosome, chr_start, chr_end, strand, promoter_start, promoter_end = transfabulator(transcript,
-                                                                                                               transcript_dict_file_name,
-                                                                                                               promoter_before_TSS,
-                                                                                                               promoter_after_TSS)
+        transcript_dict, chromosome, chr_start, chr_end, strand, promoter_start, promoter_end = transfabulator(
+                        transcript,
+                        transcript_dict_file_name,
+                        promoter_before_TSS,
+                        promoter_after_TSS)
+        
         # retrieve alignment
         alignment = retrieve_genome_aligned(transcript_dict,
                                             promoter_len,
@@ -1677,7 +1790,9 @@ for transcript_id, transcript in transcripts_dict.iteritems():
                                  correlation_folder,
                                  top_folder_name_input,
                                  ".cluster.",
-                                 transcript_id)
+                                 transcript_id,
+                                 conservation,
+                                 alignment)
             dump_json(top_folder_name_input + 'TFBSs_found.cluster.json', cluster_dict)
         else:
             print "No greatest hits"
