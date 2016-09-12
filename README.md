@@ -1,53 +1,93 @@
 TFBS_footprinting
 =================
-Pipeline: Identification of cis-regulatory elements by matrix scoring and conservation.
+Pipeline: Identification of cis-regulatory elements by matrix scoring and conservation across groups of species (mammals, primates, sauropsids, fish) catalogued in the Ensembl database.
 
 ## Purpose
-The goal of these scripts is to provide a pipeline for the transcription factor binding site (TFBS) footprinting method.
-
-## Input
-- Dictionary of: {transcript_id : Ensembl_transcript_id}
-- Di-nucleotide TFBS position frequency matrix dictionary as JSON file (PFM) (output from 'sites2dfm.py')
-- Mono-nucleotide TFBS PFM dictionary as JSON file (output from 'convert_jaspar_matrix.py')
-- Dictionary of unique TFBSs for each TF as JSON file (output from 'sites2dfm.py')
-- Ensembl species group designation (e.g. mammals)
-- Phylogenetic footprinting predictions from Bigfoot program (optional, run separately)
-- Statistical alignment of orthologous sequences from Bigfoot program (optional, run separately).  If not provided, the Enredo-Pecan-Ortheus (EPO) alignment from Ensembl is used, and a raw basic conservation score is generated.
-- Ist.medisapiens.com tissue coexpression tables (optional)
-- Various score thresholds
-
-
-## Process
-Iterate through each transcript in the dictionary and:
- 1. Retrieve EPO aligned orthologous sequences from Ensembl database (determined by species group designation) corresponding to 1000 nt upstream of transcript
- 2. Edit retrieved alignment:
-- Remove sequences that are less than 75% length of human sequence
-- Replace characters not corresponding to nucleotides (ACGT), with gaps
-- Remove gap-only columns from alignment
-- Starting from the beginning of alignment, remove all columns until the first position where at least 50% of sequences are non-gap
- 3. Generate di-nucleotide weight matrices from Jaspar TFBSs for each ortholog sequence
- 4. Score all experimentally determined TFBSs, and set lowest score as cut-off for denovo TFBS prediction
- 5. Score each sequence using all weight matrices while identifying matches to sites determined experimentally previously
- 6. Identify predicted/matched human TFBSs conserved across multiple species
- 7. For each conserved (human and 1+ additional species) TFBS, generate 'combined affinity score' as a sum of position weight scores across species
-
-## Output
-- Figure showing 10 highest scoring (combined affinity score) TFBSs mapped onto human promoter
-- CSV table file for each transcript with all predicted binding sites for all species
-- CSV table file for each transcript with conserved binding sites (human and 1+ additional species)
-- FASTA file of 1,000 nucleotide (nt) EPO alignment
-- JSON file of dictionary of predicted TFBSs
+Pipeline for the transcription factor binding site (TFBS) footprinting method.  Predict TFBSs in a target species (e.g. homo sapiens), and identify if it is conserved in a group of related species (e.g. mammals or primates) using alignments extracted from the Ensembl database.  Uses the Jaspar 2016 vertebrate binding site data of 519 TFBSs.
 
 ## Dependencies
-- Currently only tested on Linux
+- `git clone https://github.com/thirtysix/TFBS_footprinting.git`
 - Python 2.7
-- Biopython (http://biopython.org/wiki/Download#Installation_Instructions)
-- clustalo `sudo apt-get install clustalo`
+- Numpy `sudo apt-get install python-numpy`
+- Biopython `sudo apt-get install python-biopython`
 - matplotlib `sudo apt-get install python-matplotlib`
+- Currently only tested on Linux
 
-## Usage
- 1. Download TFBS_footprinting git project files to same directory
- 2. Download 'sites' folder from 'http://jaspar.genereg.net/html/DOWNLOAD/' to current directory
- 3. Execute sites2dfm.py to create di-nucleotide frequency matrices and corresponding .json output files
- 4. Execute convert_jaspar_matrix.py to create mono-nucleotide frequency matrices and corresponding .json output file from 'pfm_vertebrates.txt'
- 5. Edit 'Variables/Thresholds/Input' section of TFBS_analyzer_dinuc.py' and execute
+## User Input
+<code>
+------------------------------------------------------------------------------------------------------
+Example Usage:
+    simplest:
+    TFBS_analyzer2.py PATH_TO/sample_ids.txt
+
+    all arguments:
+    TFBS_analyzer2.py PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
+------------------------------------------------------------------------------------------------------
+
+positional arguments:
+                        Required: Location of a file containing Ensembl mammal
+                        transcript ids (see sample file: sample_ids.txt)")
+
+- target_species , -s 
+                        [default: "homo_sapiens"] - Target species (string),
+                        options are located at (https://rest.ensembl.org/info/
+                        compara/species_sets/EPO_LOW_COVERAGE?content-
+                        type=application/json). Conservation of TFs across
+                        other species will be based on identifying them in
+                        this species first.
+- species_group , -g 
+                        [default: "mammals"] - Group of species (string) to
+                        identify conservation of TFs within. Your target
+                        species should be a member of this species group (e.g.
+                        "homo_sapiens" and "mammals" or "primates". Options:
+                        "mammals", "primates", "sauropsids", "fish". Groups
+                        and members are listed at (https://rest.ensembl.org/in
+                        fo/compara/species_sets/EPO_LOW_COVERAGE?content-
+                        type=application/json)
+- promoter_before_tss , -pb 
+                        [default: 900] - Number (integer) of nucleotides
+                        upstream of TSS to include in analysis.
+- promoter_after_tss , -pa 
+                        [default: 100] - Number (integer) of nucleotides
+                        downstream of TSS to include in analysis.
+- locality_threshold , -l 
+                        [default: 5] - Nucleotide distance (integer)
+                        upstream/downstream in which TF predictions in other
+                        species will be included to support a hit in the
+                        target species.
+- conservation_min , -c 
+                        [default: 2] - Minimum number (integer) of species a
+                        predicted TF is found in, in alignment, to be
+                        considered conserved.
+- top_x_tfs , -tx     [default: 10] - Number (integer) of unique TFs to
+                        include in output .svg figure.
+- output_dir , -o     [default: /home/harlan/Dropbox/manuscripts/tfbs_footpr
+                        inting/8.somewhere/scripts/testing/Results ] - Full
+                        path of directory where result directories will be
+                        output.
+</code>
+
+## Process
+Iterate through each user provided Ensembl transcript id:
+ 1. Retrieve EPO aligned orthologous sequences from Ensembl database for user-chosen species group (mammals, primates, fish, sauropsids).
+ 2. Edit retrieved alignment:
+- Remove sequences that are less than 75% length of target_species sequence
+- Replace characters not corresponding to nucleotides (ACGT), with gaps
+- Remove gap-only columns from alignment
+ 3. Generate position weight matrices (PWMs) from Jaspar position frequency matrices (PFMs).
+ 4. Score each species sequence in the user-chosen species group using all weight matrices.
+ 5. Keep predictions with a score greater than score threshold corresponding to p-value of 0.001.
+ 6. Identify predicted TFBSs in target_species which are conserved in non-target_species species of the the species_group within the locality_threshold and totaling at least conservation_min.
+ 7. For each conserved TFBS, compute 'combined affinity score' as a sum of position weight scores of species possessing a prediction.
+ 8. Sort target_species predictions by combined affinity score, generate a vector graphics figure showing top_x_tfs unique TFs mapped onto the promoter of the target transcript.
+
+
+## Output
+- Original alignment as retrieved from Ensembl (alignment_uncleaned.fasta).
+- Cleaned alignment (alignment_cleaned.fasta).
+- Regulatory information for the target transcripts user-defined promoter region (regulatory_decoded.json).
+- Transcript properties for target transcript (transcript_dict.json).
+- All predicted TFBSs for all species which satisfy p-value threshold (TFBSs_found.all.json).
+- All predicted TFBSs for target species which are supported by at least conservation_min predictions in other species, and those supporting species, grouped into clusters (TFBSs_found.clusters.csv).
+- All predicted TFBSs for target species which are supported by at least conservation_min predictions in other species, sorted by combined affinity score (TFBSs_found.sortedclusters.csv).
+- Figure showing top_x_tfs highest scoring (combined affinity score) TFBSs mapped onto target_species promoter (ENST00000285379_mammals.Promoterhisto.svg). 
