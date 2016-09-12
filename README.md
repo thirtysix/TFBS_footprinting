@@ -14,14 +14,16 @@ Pipeline for the transcription factor binding site (TFBS) footprinting method.  
 - Currently only tested on Linux
 
 ## User Input
-<code>
+
 Example Usage:
 simplest:
+<code>
 TFBS_analyzer2.py PATH_TO/sample_ids.txt
-
+</code>
 all arguments:
+<code>
 TFBS_analyzer2.py PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
-
+</code>
 positional arguments:
 Required: Location of a file containing Ensembl mammal
 transcript ids (see sample file: sample_ids.txt)")
@@ -40,7 +42,7 @@ transcript ids (see sample file: sample_ids.txt)")
 [default: 2] - Minimum number (integer) of species apredicted TF is found in, in alignment, to beconsidered conserved.
 - top_x_tfs , -tx [default: 10] - Number (integer) of unique TFs toinclude in output .svg figure.
 - output_dir , -o [default: /home/harlan/Dropbox/manuscripts/tfbs_footprinting/8.somewhere/scripts/testing/Results ] - Fullpath of directory where result directories will beoutput.
-</code>
+
 
 ## Process
 Iterate through each user provided Ensembl transcript id:
