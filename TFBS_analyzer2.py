@@ -494,15 +494,20 @@ def top_x_greatest_hits(sorted_clusters_human_hits_list, top_x_tfs_count):
 ################################################################################
 # Alignment Manipulation #######################################################
 ################################################################################
-def retrieve_genome_aligned(species_group, target_species, chromosome, strand, promoter_start, promoter_end):
+def retrieve_genome_aligned(species_group, target_species, chromosome, strand, promoter_start, promoter_end, coverage):
     """Takes as input human CCDS start position and size of promoter to be extracted.  Retrieves genome aligned,
     corresponding regions in all orthologs."""
 
     # Retrieve alignment if alignment FASTA does not already exist  
     query_type = "/alignment/block/region/"
     pre_options = target_species + "/" + chromosome + ":" + str(promoter_start) + "-" + str(promoter_end) + ":" + str(strand)   
-    
-    options = pre_options + "?method=EPO_LOW_COVERAGE;compact=1;content-type=application/json;species_set_group=" + species_group
+
+    if coverage == "low":
+        coverage_str = "EPO_LOW_COVERAGE"
+    else:
+        coverage_str = "EPO"
+        
+    options = pre_options + "?method=" + coverage_str + ";compact=1;content-type=application/json;species_set_group=" + species_group
     alignment_decoded = ensemblrest(query_type, options, 'json', "")
 
     if 'error' not in alignment_decoded:            
@@ -607,7 +612,7 @@ def load_genome_aligned(aligned_filename):
     return alignment
 
 
-def alignment_tools(ensembl_aligned_filename, cleaned_aligned_filename):
+def alignment_tools(ensembl_aligned_filename, cleaned_aligned_filename, coverage):
     """
     Return cleaned alignment for further analysis.
     """
@@ -617,7 +622,7 @@ def alignment_tools(ensembl_aligned_filename, cleaned_aligned_filename):
 
         # If uncleaned Ensembl alignment file doesn't exist, or the size is zero: retrieve from Ensembl, write to file.
         if not os.path.isfile(ensembl_aligned_filename) or (os.path.isfile(ensembl_aligned_filename) and os.path.getsize(ensembl_aligned_filename) == 0):        
-            alignment = retrieve_genome_aligned(species_group, target_species, chromosome, strand, promoter_start, promoter_end)
+            alignment = retrieve_genome_aligned(species_group, target_species, chromosome, strand, promoter_start, promoter_end, coverage)
             fasta_writer(alignment, ensembl_aligned_filename)   
 
         # If uncleaned Ensembl file exists and size is not zero: clean, write to cleaned filename.
@@ -1015,7 +1020,7 @@ def get_args():
                 TFBS_analyzer2.py PATH_TO/sample_ids.txt
 
                 all arguments:
-                TFBS_analyzer2.py PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
+                TFBS_analyzer2.py PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
             ------------------------------------------------------------------------------------------------------
             """))
 
@@ -1024,13 +1029,15 @@ def get_args():
                         help='Required: Location of a file containing Ensembl target species transcript ids (see sample file: sample_ids.txt)")')
     parser.add_argument('--target_species', '-s', metavar='', type=str, default="homo_sapiens",
                         help='[default: "homo_sapiens"] - Target species (string), options are located at \
-                        (https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json).\
+                        (https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#species).\
                         Conservation of TFs across other species will be based on identifying them in this species first.')
     parser.add_argument('--species_group', '-g', metavar='', type=str, default="mammals",
                         help='[default: "mammals"] - Group of species (string) to identify conservation of TFs within.\
                         Your target species should be a member of this species group (e.g. "homo_sapiens" and "mammals" or "primates".\
                         Options: "mammals", "primates", "sauropsids", "fish".\
-                        Groups and members are listed at (https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json)')
+                        Groups and members are listed at (https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#species)')
+    parser.add_argument('--coverage', '-e', metavar='',choices=("low", "high"), type=str, default="low",
+                        help='[default: "low"] - Which Ensembl EPO alignment of species to use ("low" or "high").  The low coverage contains significantly more species and is recommended.')
     parser.add_argument('--promoter_before_tss', '-pb', metavar='', type=int, default=900,
                         help='[default: 900] - Number (integer) of nucleotides upstream of TSS to include in analysis.')
     parser.add_argument('--promoter_after_tss', '-pa', metavar='', type=int, default=100,
@@ -1047,23 +1054,23 @@ def get_args():
     ##parser.add_argument('--pval', '-p', type=float, default=0.001, help='P-value (float) for determine score cutoff (range: 0.001 to 0.0000001) [default: 0.001]')
     ##parser.add_argument('--tf_ids', '-tfs', type=str, help='Optional: Location of a file containing a limited list of TFs to use in scoring alignment [default: all Jaspar TFs]')
     args = parser.parse_args()
-
-
-    ##transcript_ids_filename = "/home/harlan/Dropbox/manuscripts/tfbs_footprinting/8.somewhere/scripts/testing/sample_ids"
     transcript_ids_filename = args.t_ids_file
+    species_group = args.species_group
     target_species = args.target_species
+    coverage = args.coverage
     locality_threshold = args.locality_threshold
     strand_length_threshold = args.conservation_min
     promoter_before_tss = args.promoter_before_tss
     promoter_after_tss = args.promoter_after_tss
     top_x_tfs_count = args.top_x_tfs
     output_dir = args.output_dir
-    species_group = args.species_group
+    
+    
 
-    return args, transcript_ids_filename, target_species, species_group, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir
+    return args, transcript_ids_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir
 
 
-args, transcript_ids_filename, target_species, species_group, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir = get_args()
+args, transcript_ids_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir = get_args()
 
 # Create directory for results
 directory_creator(output_dir)
@@ -1097,7 +1104,7 @@ for transcript_id in transcript_ids_list:
     # filenames for alignment and ensembl regulatory data
     ensembl_aligned_filename = os.path.join(target_dir, "alignment_uncleaned.fasta")
     cleaned_aligned_filename = os.path.join(target_dir, "alignment_cleaned.fasta")
-    alignment = alignment_tools(ensembl_aligned_filename, cleaned_aligned_filename)
+    alignment = alignment_tools(ensembl_aligned_filename, cleaned_aligned_filename, coverage)
 
     if len(alignment) > 0:
         target_species_row = alignment[0]
