@@ -1,11 +1,11 @@
-TFBS_footprinting
+##TFBS_analyzer2
 =================
 Pipeline: Identification of cis-regulatory elements by matrix scoring and conservation across groups of species (mammals, primates, sauropsids, fish) catalogued in the Ensembl database.
 
-## Purpose
+## 1 Purpose
 Pipeline for the transcription factor binding site (TFBS) footprinting method.  Predict TFBSs in a target species (e.g. homo sapiens), and identify if it is conserved in a group of related species (e.g. mammals or primates) using alignments extracted from the Ensembl database.  Uses the Jaspar 2016 vertebrate binding site data of 519 TFBSs.
 
-## Dependencies
+## 2 Dependencies
 - `git clone https://github.com/thirtysix/TFBS_footprinting.git`
 - Python 2.7
 - Numpy `sudo apt-get install python-numpy`
@@ -13,19 +13,16 @@ Pipeline for the transcription factor binding site (TFBS) footprinting method.  
 - matplotlib `sudo apt-get install python-matplotlib`
 - Currently only tested on Linux
 
-## User Input
-
-<code>
+## 3 User Input
+### 3.1 Examples
+```
 TFBS_analyzer2.py PATH_TO/sample_ids.txt
-</code>
-
-<code>
 TFBS_analyzer2.py PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
-</code>
+```
 
+### 3.2 Arguments
 - positional arguments:
-Required: Location of a file containing Ensembl mammal
-transcript ids (see sample file: sample_ids.txt)")
+Location of a file containing Ensembl target_species transcript ids (see sample file: sample_ids.txt)")
 
 - --target_species , -s 
 [default: "homo_sapiens"] - Target species (string),options are located at (https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json). Conservation of TFs acrossother species will be based on identifying them inthis species first.
@@ -43,7 +40,8 @@ transcript ids (see sample file: sample_ids.txt)")
 - --output_dir , -o [default: /home/harlan/Dropbox/manuscripts/tfbs_footprinting/8.somewhere/scripts/testing/Results ] - Fullpath of directory where result directories will beoutput.
 
 
-## Process
+
+## 4 Process
 Iterate through each user provided Ensembl transcript id:
  1. Retrieve EPO aligned orthologous sequences from Ensembl database for user-chosen species group (mammals, primates, fish, sauropsids).
  2. Edit retrieved alignment:
@@ -58,7 +56,7 @@ Iterate through each user provided Ensembl transcript id:
  8. Sort target_species predictions by combined affinity score, generate a vector graphics figure showing top_x_tfs unique TFs mapped onto the promoter of the target transcript.
 
 
-## Output
+## 5 Output
 - Original alignment as retrieved from Ensembl (alignment_uncleaned.fasta).
 - Cleaned alignment (alignment_cleaned.fasta).
 - Regulatory information for the target transcripts user-defined promoter region (regulatory_decoded.json).
@@ -66,4 +64,4 @@ Iterate through each user provided Ensembl transcript id:
 - All predicted TFBSs for all species which satisfy p-value threshold (TFBSs_found.all.json).
 - All predicted TFBSs for target species which are supported by at least conservation_min predictions in other species, and those supporting species, grouped into clusters (TFBSs_found.clusters.csv).
 - All predicted TFBSs for target species which are supported by at least conservation_min predictions in other species, sorted by combined affinity score (TFBSs_found.sortedclusters.csv).
-- Figure showing top_x_tfs highest scoring (combined affinity score) TFBSs mapped onto target_species promoter (ENST00000285379_mammals.Promoterhisto.svg). 
+- Figure showing top_x_tfs highest scoring (combined affinity score) TFBSs mapped onto target_species promoter (ENSxxxxxxxxxxxx_mammals.Promoterhisto.svg). 
