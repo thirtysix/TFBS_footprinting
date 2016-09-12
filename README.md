@@ -34,6 +34,8 @@ Location of a file containing Ensembl target_species transcript ids (see sample 
 [default: "homo_sapiens"] - Target species (string),options are located at (https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json). Conservation of TFs acrossother species will be based on identifying them inthis species first.
 - --species_group , -g 
 [default: "mammals"] - Group of species (string) toidentify conservation of TFs within. Your targetspecies should be a member of this species group (e.g."homo_sapiens" and "mammals" or "primates". Options:"mammals", "primates", "sauropsids", "fish". Groupsand members are listed at (https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json)
+- --coverage , -e
+[default: "low"] - Which Ensembl EPO alignment of species to use ("low" or "high"). The low coverage contains significantly more species and is recommended.
 - --promoter_before_tss , -pb 
 [default: 900] - Number (integer) of nucleotidesupstream of TSS to include in analysis.
 - --promoter_after_tss , -pa 
@@ -48,17 +50,17 @@ Location of a file containing Ensembl target_species transcript ids (see sample 
 
 ## 3 Process
 Iterate through each user provided Ensembl transcript id:
- 1. Retrieve EPO aligned orthologous sequences from Ensembl database for user-chosen species group (mammals, primates, fish, sauropsids).
+ 1. Retrieve EPO aligned orthologous sequences from Ensembl database for user-defined species group (mammals, primates, fish, sauropsids) at for promoter of transcript id.
  2. Edit retrieved alignment:
-- Remove sequences that are less than 75% length of target_species sequence
-- Replace characters not corresponding to nucleotides (ACGT), with gaps
-- Remove gap-only columns from alignment
+- Remove species sequences that are less than 75% length of target_species sequence.
+- Replace characters not corresponding to nucleotides (ACGT), with gaps characters "-".
+- Remove gap-only columns from alignment.
  3. Generate position weight matrices (PWMs) from Jaspar position frequency matrices (PFMs).
- 4. Score each species sequence in the user-chosen species group using all weight matrices.
+ 4. Score each species sequence in the alignment using all PWMs.
  5. Keep predictions with a score greater than score threshold corresponding to p-value of 0.001.
  6. Identify predicted TFBSs in target_species which are conserved in non-target_species species of the the species_group within the locality_threshold and totaling at least conservation_min.
  7. For each conserved TFBS, compute 'combined affinity score' as a sum of position weight scores of species possessing a prediction.
- 8. Sort target_species predictions by combined affinity score, generate a vector graphics figure showing top_x_tfs unique TFs mapped onto the promoter of the target transcript.
+ 8. Sort target_species predictions by combined affinity score, generate a vector graphics figure showing top_x_tfs unique TFs mapped onto the promoter of the target transcript, and additional output as described below.
 
 
 ## 4 Output
@@ -71,8 +73,8 @@ Iterate through each user provided Ensembl transcript id:
 - All predicted TFBSs for target species which are supported by at least conservation_min predictions in other species, sorted by combined affinity score (TFBSs_found.sortedclusters.csv).
 - Figure showing top_x_tfs highest scoring (combined affinity score) TFBSs mapped onto target_species promoter (ENSxxxxxxxxxxxx_mammals.Promoterhisto.svg). 
 
-## Species
-The promoter region of any Ensembl transcript of any species within any column can be compared against the other members of the same column in order to identify a conserved binding site of the 519 transcription factors described in the Jaspar database.
+## 5 Species
+The promoter region of any Ensembl transcript of any species within any column can be compared against the other members of the same column in order to identify a conserved binding site of the 519 transcription factors described in the Jaspar database.  The Enredo-Pecan-Ortheus pipeline was used to create whole genome alignments between the species in each column.  'EPO_LOW' indicates this column also contains genomes for which the sequencing of the current version is still considered low-coverage.  The TFBS footprinting pipeline partially accounts for this by removing sequences from alignments which appear to be missing segments.  Due to the significantly greater number of species, we recommend using the low coverage versions except for primate comparisons which do not have a low coverage version.
 
 EPO_LOW mammals | EPO_LOW fish | EPO_LOW sauropsids | EPO mammals | EPO primates | EPO fish | EPO sauropsids
 |---|---|---|---|---|---|---|
