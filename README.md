@@ -15,33 +15,32 @@ Pipeline for the transcription factor binding site (TFBS) footprinting method.  
 
 ## User Input
 
-Example Usage:
-simplest:
 <code>
 TFBS_analyzer2.py PATH_TO/sample_ids.txt
 </code>
-all arguments:
+
 <code>
 TFBS_analyzer2.py PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
 </code>
-positional arguments:
+
+- positional arguments:
 Required: Location of a file containing Ensembl mammal
 transcript ids (see sample file: sample_ids.txt)")
 
-- target_species , -s 
+- --target_species , -s 
 [default: "homo_sapiens"] - Target species (string),options are located at (https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json). Conservation of TFs acrossother species will be based on identifying them inthis species first.
-- species_group , -g 
+- --species_group , -g 
 [default: "mammals"] - Group of species (string) toidentify conservation of TFs within. Your targetspecies should be a member of this species group (e.g."homo_sapiens" and "mammals" or "primates". Options:"mammals", "primates", "sauropsids", "fish". Groupsand members are listed at (https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json)
-- promoter_before_tss , -pb 
+- --promoter_before_tss , -pb 
 [default: 900] - Number (integer) of nucleotidesupstream of TSS to include in analysis.
-- promoter_after_tss , -pa 
+- --promoter_after_tss , -pa 
 [default: 100] - Number (integer) of nucleotidesdownstream of TSS to include in analysis.
-- locality_threshold , -l 
+- --locality_threshold , -l 
 [default: 5] - Nucleotide distance (integer)upstream/downstream in which TF predictions in otherspecies will be included to support a hit in the target species.
-- conservation_min , -c 
+- --conservation_min , -c 
 [default: 2] - Minimum number (integer) of species apredicted TF is found in, in alignment, to beconsidered conserved.
-- top_x_tfs , -tx [default: 10] - Number (integer) of unique TFs toinclude in output .svg figure.
-- output_dir , -o [default: /home/harlan/Dropbox/manuscripts/tfbs_footprinting/8.somewhere/scripts/testing/Results ] - Fullpath of directory where result directories will beoutput.
+- --top_x_tfs , -tx [default: 10] - Number (integer) of unique TFs toinclude in output .svg figure.
+- --output_dir , -o [default: /home/harlan/Dropbox/manuscripts/tfbs_footprinting/8.somewhere/scripts/testing/Results ] - Fullpath of directory where result directories will beoutput.
 
 
 ## Process
