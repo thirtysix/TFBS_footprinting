@@ -15,56 +15,31 @@ Pipeline for the transcription factor binding site (TFBS) footprinting method.  
 
 ## User Input
 <code>
-------------------------------------------------------------------------------------------------------
 Example Usage:
-    simplest:
-    TFBS_analyzer2.py PATH_TO/sample_ids.txt
+simplest:
+TFBS_analyzer2.py PATH_TO/sample_ids.txt
 
-    all arguments:
-    TFBS_analyzer2.py PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
-------------------------------------------------------------------------------------------------------
+all arguments:
+TFBS_analyzer2.py PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
 
 positional arguments:
-                        Required: Location of a file containing Ensembl mammal
-                        transcript ids (see sample file: sample_ids.txt)")
+Required: Location of a file containing Ensembl mammal
+transcript ids (see sample file: sample_ids.txt)")
 
 - target_species , -s 
-                        [default: "homo_sapiens"] - Target species (string),
-                        options are located at (https://rest.ensembl.org/info/
-                        compara/species_sets/EPO_LOW_COVERAGE?content-
-                        type=application/json). Conservation of TFs across
-                        other species will be based on identifying them in
-                        this species first.
+[default: "homo_sapiens"] - Target species (string),options are located at (https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json). Conservation of TFs acrossother species will be based on identifying them inthis species first.
 - species_group , -g 
-                        [default: "mammals"] - Group of species (string) to
-                        identify conservation of TFs within. Your target
-                        species should be a member of this species group (e.g.
-                        "homo_sapiens" and "mammals" or "primates". Options:
-                        "mammals", "primates", "sauropsids", "fish". Groups
-                        and members are listed at (https://rest.ensembl.org/in
-                        fo/compara/species_sets/EPO_LOW_COVERAGE?content-
-                        type=application/json)
+[default: "mammals"] - Group of species (string) toidentify conservation of TFs within. Your targetspecies should be a member of this species group (e.g."homo_sapiens" and "mammals" or "primates". Options:"mammals", "primates", "sauropsids", "fish". Groupsand members are listed at (https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json)
 - promoter_before_tss , -pb 
-                        [default: 900] - Number (integer) of nucleotides
-                        upstream of TSS to include in analysis.
+[default: 900] - Number (integer) of nucleotidesupstream of TSS to include in analysis.
 - promoter_after_tss , -pa 
-                        [default: 100] - Number (integer) of nucleotides
-                        downstream of TSS to include in analysis.
+[default: 100] - Number (integer) of nucleotidesdownstream of TSS to include in analysis.
 - locality_threshold , -l 
-                        [default: 5] - Nucleotide distance (integer)
-                        upstream/downstream in which TF predictions in other
-                        species will be included to support a hit in the
-                        target species.
+[default: 5] - Nucleotide distance (integer)upstream/downstream in which TF predictions in otherspecies will be included to support a hit in the target species.
 - conservation_min , -c 
-                        [default: 2] - Minimum number (integer) of species a
-                        predicted TF is found in, in alignment, to be
-                        considered conserved.
-- top_x_tfs , -tx     [default: 10] - Number (integer) of unique TFs to
-                        include in output .svg figure.
-- output_dir , -o     [default: /home/harlan/Dropbox/manuscripts/tfbs_footpr
-                        inting/8.somewhere/scripts/testing/Results ] - Full
-                        path of directory where result directories will be
-                        output.
+[default: 2] - Minimum number (integer) of species apredicted TF is found in, in alignment, to beconsidered conserved.
+- top_x_tfs , -tx [default: 10] - Number (integer) of unique TFs toinclude in output .svg figure.
+- output_dir , -o [default: /home/harlan/Dropbox/manuscripts/tfbs_footprinting/8.somewhere/scripts/testing/Results ] - Fullpath of directory where result directories will beoutput.
 </code>
 
 ## Process
