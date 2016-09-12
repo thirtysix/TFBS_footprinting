@@ -2,10 +2,17 @@
 =================
 Pipeline: Identification of cis-regulatory elements by matrix scoring and conservation across groups of species (mammals, primates, sauropsids, fish) catalogued in the Ensembl database.
 
-## 1 Purpose
-Pipeline for the transcription factor binding site (TFBS) footprinting method.  Predict TFBSs in a target species (e.g. homo sapiens), and identify if it is conserved in a group of related species (e.g. mammals or primates) using alignments extracted from the Ensembl database.  Uses the Jaspar 2016 vertebrate binding site data of 519 TFBSs.
+## 1 Background
+The TFBS footprinting method computationally predicts transcription factor binding sites (TFBSs) in a target species (e.g. homo sapiens), and identifies if they are conserved in a group of related species (e.g. mammals or primates) using alignments extracted from, and established within, the Ensembl database.  Our analyses have shown this method is superior in prediction of functional TFBSs compared to methods (PWMs and DeepBind) analyzing single species alone.  At the same time, TFBS footprinting is an extension of these methods.  This implementation uses the Jaspar 2016 vertebrate binding site data of 519 TFBSs.  This tool allows the user to analyze the user-defined promoter regions near the transcription start site of many vertebrate transcripts defined in the Ensembl database.
 
-## 2 Dependencies
+## 2 Usage 
+Predict TFBSs in the promoter of from 1-80,000 human protein coding transcripts, and identify if they are conserved in mammals or primates.
+Model organisms such as mouse and zebrafish.
+39 Mammals
+ee the Ensembl species groups to plan your analysis: https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json
+
+
+### 2.1 Dependencies
 - `git clone https://github.com/thirtysix/TFBS_footprinting.git`
 - Python 2.7
 - Numpy `sudo apt-get install python-numpy`
@@ -13,14 +20,13 @@ Pipeline for the transcription factor binding site (TFBS) footprinting method.  
 - matplotlib `sudo apt-get install python-matplotlib`
 - Currently only tested on Linux
 
-## 3 User Input
-### 3.1 Examples
+### 2.2 User Input Examples
 ```
-TFBS_analyzer2.py PATH_TO/sample_ids.txt
-TFBS_analyzer2.py PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
+$ TFBS_analyzer2.py PATH_TO/sample_ids.txt
+$ TFBS_analyzer2.py PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
 ```
 
-### 3.2 Arguments
+### 2.3 Arguments
 - positional arguments:
 Location of a file containing Ensembl target_species transcript ids (see sample file: sample_ids.txt)")
 
@@ -40,8 +46,7 @@ Location of a file containing Ensembl target_species transcript ids (see sample 
 - --output_dir , -o [default: /home/harlan/Dropbox/manuscripts/tfbs_footprinting/8.somewhere/scripts/testing/Results ] - Fullpath of directory where result directories will beoutput.
 
 
-
-## 4 Process
+## 3 Process
 Iterate through each user provided Ensembl transcript id:
  1. Retrieve EPO aligned orthologous sequences from Ensembl database for user-chosen species group (mammals, primates, fish, sauropsids).
  2. Edit retrieved alignment:
@@ -56,7 +61,7 @@ Iterate through each user provided Ensembl transcript id:
  8. Sort target_species predictions by combined affinity score, generate a vector graphics figure showing top_x_tfs unique TFs mapped onto the promoter of the target transcript.
 
 
-## 5 Output
+## 4 Output
 - Original alignment as retrieved from Ensembl (alignment_uncleaned.fasta).
 - Cleaned alignment (alignment_cleaned.fasta).
 - Regulatory information for the target transcripts user-defined promoter region (regulatory_decoded.json).
@@ -65,3 +70,50 @@ Iterate through each user provided Ensembl transcript id:
 - All predicted TFBSs for target species which are supported by at least conservation_min predictions in other species, and those supporting species, grouped into clusters (TFBSs_found.clusters.csv).
 - All predicted TFBSs for target species which are supported by at least conservation_min predictions in other species, sorted by combined affinity score (TFBSs_found.sortedclusters.csv).
 - Figure showing top_x_tfs highest scoring (combined affinity score) TFBSs mapped onto target_species promoter (ENSxxxxxxxxxxxx_mammals.Promoterhisto.svg). 
+
+## Species
+The promoter region of any Ensembl transcript of any species within any column can be compared against the other members of the same column in order to identify a conserved binding site of the 519 transcription factors described in the Jaspar database.
+
+EPO_LOW mammals | EPO_LOW fish | EPO_LOW sauropsids | EPO mammals | EPO primates | EPO fish | EPO sauropsids
+|---|---|---|---|---|---|---|
+ailuropoda_melanoleuca | astyanax_mexicanus | anas_platyrhynchos | bos_taurus | callithrix_jacchus | danio_rerio | anolis_carolinensis
+bos_taurus | danio_rerio | anolis_carolinensis | callithrix_jacchus | chlorocebus_sabaeus | gasterosteus_aculeatus | gallus_gallus
+callithrix_jacchus | gadus_morhua | ficedula_albicollis | canis_familiaris | gorilla_gorilla | lepisosteus_oculatus | meleagris_gallopavo
+canis_familiaris | gasterosteus_aculeatus | gallus_gallus | chlorocebus_sabaeus | homo_sapiens | oryzias_latipes | taeniopygia_guttata
+cavia_porcellus | lepisosteus_oculatus | meleagris_gallopavo | equus_caballus | macaca_mulatta | tetraodon_nigroviridis | 
+chlorocebus_sabaeus | oreochromis_niloticus | pelodiscus_sinensis | felis_catus | pan_troglodytes |  | 
+choloepus_hoffmanni | oryzias_latipes | taeniopygia_guttata | gorilla_gorilla | papio_anubis |  | 
+dasypus_novemcinctus | poecilia_formosa |  | homo_sapiens | pongo_abelii |  | 
+dipodomys_ordii | takifugu_rubripes |  | macaca_mulatta |  |  | 
+echinops_telfairi | tetraodon_nigroviridis |  | mus_musculus |  |  | 
+equus_caballus | xiphophorus_maculatus |  | oryctolagus_cuniculus |  |  | 
+erinaceus_europaeus |  |  | ovis_aries |  |  | 
+felis_catus |  |  | pan_troglodytes |  |  | 
+gorilla_gorilla |  |  | papio_anubis |  |  | 
+homo_sapiens |  |  | pongo_abelii |  |  | 
+ictidomys_tridecemlineatus |  |  | rattus_norvegicus |  |  | 
+loxodonta_africana |  |  | sus_scrofa |  |  | 
+macaca_mulatta |  |  |  |  |  | 
+microcebus_murinus |  |  |  |  |  | 
+mus_musculus |  |  |  |  |  | 
+mustela_putorius_furo |  |  |  |  |  | 
+myotis_lucifugus |  |  |  |  |  | 
+nomascus_leucogenys |  |  |  |  |  | 
+ochotona_princeps |  |  |  |  |  | 
+oryctolagus_cuniculus |  |  |  |  |  | 
+otolemur_garnettii |  |  |  |  |  | 
+ovis_aries |  |  |  |  |  | 
+pan_troglodytes |  |  |  |  |  | 
+papio_anubis |  |  |  |  |  | 
+pongo_abelii |  |  |  |  |  | 
+procavia_capensis |  |  |  |  |  | 
+pteropus_vampyrus |  |  |  |  |  | 
+rattus_norvegicus |  |  |  |  |  | 
+sorex_araneus |  |  |  |  |  | 
+sus_scrofa |  |  |  |  |  | 
+tarsius_syrichta |  |  |  |  |  | 
+tupaia_belangeri |  |  |  |  |  | 
+tursiops_truncatus |  |  |  |  |  | 
+vicugna_pacos |  |  |  |  |  | 
+
+
