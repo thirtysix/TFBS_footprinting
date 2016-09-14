@@ -9,7 +9,6 @@ import os
 import json
 import time
 import csv
-import pprint
 import logging
 
 from Bio import SeqIO
@@ -37,23 +36,92 @@ import itertools
 ################################################################################
 # Functions ####################################################################
 ################################################################################
-
+script_dir = os.path.dirname(__file__)
 ################################################################################
 # House-keeping functions ######################################################
 ################################################################################
+def get_args():
+    """
+    Retrieve arguments provided by the user.
+    """
+
+    # Instantiate the parser
+    parser = argparse.ArgumentParser(
+        prog="TFBS_analyzer2.py",
+        formatter_class = argparse.RawDescriptionHelpFormatter,
+        description=textwrap.dedent("""\
+            TFBS Footprinting - Identification of conserved vertebrate transcription factor binding sites (TFBSs)')
+
+            ------------------------------------------------------------------------------------------------------
+            Example Usage:
+                simplest:
+                TFBS_analyzer2.py PATH_TO/sample_ids.txt
+
+                all arguments:
+                TFBS_analyzer2.py PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
+            ------------------------------------------------------------------------------------------------------
+            """))
+
+    # Arguments
+    parser.add_argument('t_ids_file', metavar='', type=str,
+                        help='Required: Location of a file containing Ensembl target species transcript ids (see sample file: sample_ids.txt)")')
+    parser.add_argument('--target_species', '-s', metavar='', type=str, default="homo_sapiens",
+                        help='[default: "homo_sapiens"] - Target species (string), options are located at \
+                        (https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#species).\
+                        Conservation of TFs across other species will be based on identifying them in this species first.')
+    parser.add_argument('--species_group', '-g', metavar='', type=str, default="mammals",
+                        help='[default: "mammals"] - Group of species (string) to identify conservation of TFs within.\
+                        Your target species should be a member of this species group (e.g. "homo_sapiens" and "mammals" or "primates".\
+                        Options: "mammals", "primates", "sauropsids", "fish".\
+                        Groups and members are listed at (https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#species)')
+    parser.add_argument('--coverage', '-e', metavar='',choices=("low", "high"), type=str, default="low",
+                        help='[default: "low"] - Which Ensembl EPO alignment of species to use ("low" or "high").  The low coverage contains significantly more species and is recommended.')
+    parser.add_argument('--promoter_before_tss', '-pb', metavar='', type=int, default=900,
+                        help='[default: 900] - Number (integer) of nucleotides upstream of TSS to include in analysis.')
+    parser.add_argument('--promoter_after_tss', '-pa', metavar='', type=int, default=100,
+                        help='[default: 100] - Number (integer) of nucleotides downstream of TSS to include in analysis.')
+    parser.add_argument('--locality_threshold', '-l', metavar='', type=int, default=5,
+                        help='[default: 5] - Nucleotide distance (integer) upstream/downstream in which TF predictions in other species will be included to support a hit in the target species.')
+    parser.add_argument('--conservation_min', '-c', metavar='', type=int, default=10,
+                        help='[default: 2] - Minimum number (integer) of species a predicted TF is found in, in alignment, to be considered conserved.')
+    parser.add_argument('--top_x_tfs', '-tx', metavar='', type=int, default=10,
+                        help='[default: 10] - Number (integer) of unique TFs to include in output .svg figure.')
+    parser.add_argument('--output_dir', '-o', metavar='', type=str, default=os.path.join(script_dir, "Results"),
+                        help=" ".join(['[default:', os.path.join(script_dir, "Results"), '] - Full path of directory where result directories will be output.']))
+    # Functionality to add later
+    ##parser.add_argument('--pval', '-p', type=float, default=0.001, help='P-value (float) for determine score cutoff (range: 0.001 to 0.0000001) [default: 0.001]')
+    ##parser.add_argument('--tf_ids', '-tfs', type=str, help='Optional: Location of a file containing a limited list of TFs to use in scoring alignment [default: all Jaspar TFs]')
+    args = parser.parse_args()
+    transcript_ids_filename = args.t_ids_file
+    species_group = args.species_group
+    target_species = args.target_species
+    coverage = args.coverage
+    locality_threshold = args.locality_threshold
+    strand_length_threshold = args.conservation_min
+    promoter_before_tss = args.promoter_before_tss
+    promoter_after_tss = args.promoter_after_tss
+    top_x_tfs_count = args.top_x_tfs
+    output_dir = args.output_dir
+    
+    return args, transcript_ids_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir
+
+
 def load_json(filename):
     with open(filename) as open_infile:
         json_data = json.load(open_infile)
     return json_data
 
+
 def dump_json(filename, json_data):
     with open(filename, 'w') as open_outfile:
         json_data = json.dump(json_data, open_outfile)
+
 
 def directory_creator(directory_name):
     """Create directory if it does not already exist"""
     if not os.path.isdir(directory_name):
         os.mkdir(directory_name)
+
 
 def ensemblrest(query_type, options, output_type, ensembl_id=None):
     """Retrieve REST data from Ensembl using provided ID, query type, and options"""
@@ -68,26 +136,28 @@ def ensemblrest(query_type, options, output_type, ensembl_id=None):
         resp, json_data = http.request(full_query, method="GET")
         decoded_json = json.loads(json_data)
         ensemblrest_rate(resp)
+
         return decoded_json
 
     if output_type == 'fasta':
         resp, fasta_content = http.request(server+ext, method="GET", headers={"Content-Type":"text/x-fasta"})
         ensemblrest_rate(resp)
+
         return fasta_content
+
 
 def ensemblrest_rate(resp):
     """read ensembl REST headers and determine if rate-limit has been exceeded, sleep appropriately if necessary"""
     if int(resp['x-ratelimit-remaining']) == 0:       
         if 'Retry-After' in resp:
             sleep_time = int(resp['Retry-After'])
-            print "Ensembl REST (Retry-After) requests sleeping for", sleep_time
+            logging.warning(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "Ensembl REST (Retry-After) requests sleeping for", str(sleep_time)]))
             sleep(sleep_time)
             
         else:
             sleep_time = 40
-            print "Ensembl REST requests sleeping for", sleep_time
+            logging.warning(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "Ensembl REST requests sleeping for", str(sleep_time)]))
             sleep(sleep_time)
-
 
 
 def parse_transcript_ids(transcript_ids_filename):
@@ -100,6 +170,8 @@ def parse_transcript_ids(transcript_ids_filename):
         transcript_ids_list = [x for x in transcript_ids_list if len(x)>0]
 
     return transcript_ids_list
+
+
 ################################################################################
 # PWM analysis #################################################################
 ################################################################################
@@ -263,7 +335,7 @@ def tfbs_finder(transcript_name,alignment,TFBS_matrix_dict,target_dir,pwm_score_
         dump_json(tfbss_found_dict_outfilename, tfbss_found_dict)
 
     end_time = time.time()
-    print "total time for this transcript:", end_time - start_time, "seconds"
+    logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "total time for this transcript:", str(end_time - start_time), "seconds"]))
 
     return tfbss_found_dict
 
@@ -345,7 +417,6 @@ def find_clusters(tfbss_found_dict, cleaned_aligned_filename, strand_length_thre
         # identify all human hits for this tf_name
         for hit in hits:
             # ref-point
-##            if 'sapiens' in hit[1].lower():
             if hit[1].lower() == target_species:
                 human_seeds.append(hit)
 
@@ -491,6 +562,7 @@ def top_x_greatest_hits(sorted_clusters_human_hits_list, top_x_tfs_count):
 
     return top_x_greatest_hits_dict
 
+
 ################################################################################
 # Alignment Manipulation #######################################################
 ################################################################################
@@ -535,7 +607,6 @@ def remove_non_ACGT(alignment):
     for entry in alignment:
         for non_alignment_char in non_alignment_chars:
             entry['seq'] = entry['seq'].replace(non_alignment_char, '-')
-##        entry['seq'] = entry['seq'].replace(' ', '-').replace('.', '-').replace('N', '-')
 
     return alignment
 
@@ -574,9 +645,7 @@ def remove_duplicate_species(alignment):
         longest_seq = sorted_duplicate_seqs_lens[0]
         longest_seq_index = duplicate_seqs_lens.index(longest_seq)
         kept_seq = duplicate_seqs[longest_seq_index]
-##        if "sapiens" in duplicate_id:
         if duplicate_id == target_species:
-
             non_duplicate_alignment = [kept_seq] + non_duplicate_alignment
         else:
             non_duplicate_alignment.append(kept_seq)     
@@ -783,6 +852,7 @@ def alignment_conservation(aligned_filename):
 
     return conservation
 
+
 def CpG(aligned_filename):
     """Score the CpG content of the human sequence over a 200 nt window."""
 
@@ -843,7 +913,6 @@ def plot_promoter(transcript_name, top_x_greatest_hits_dict, target_dir, convert
     ax3 = plt.subplot2grid((10,1),(9,0), sharex=ax1, rowspan = 2, colspan = 11)
 
     # Generate data for each of the greatest_hits and plot corresponding bar
-##    color_series = ['#800000', '#FF8C00', '#FFD700', '#B8860B', '#BDB76B', '#808000', '#00FF00', '#008080', '#4682B4', '#00BFFF', '#0000CD', '#8A2BE2', '#696969', '#C0C0C0', '#A6D785']
     color_series=['#FFB300','#803E75','#FF6800','#A6BDD7','#C10020','#CEA262','#817066','#007D34','#F6768E','#00538A','#FF7A5C','#53377A','#FF8E00','#B32851','#F4C800','#7F180D','#93AA00','#593315','#F13A13','#232C16']
     color_dict = {'CTCF':'#FF0000', 'TBP':'#FF00FF'}
     y_range = []
@@ -865,7 +934,6 @@ def plot_promoter(transcript_name, top_x_greatest_hits_dict, target_dir, convert
         tf_name = x[0]
         great_hit = x[1:]
 
-
         # choose a unique color for each tf_name
         if tf_name not in color_dict: 
             pick = numpyrandom.randint(0, len(color_series) - 1)
@@ -884,7 +952,6 @@ def plot_promoter(transcript_name, top_x_greatest_hits_dict, target_dir, convert
             
         edge_color = picked_color
             
-        print tf_name
         x_series = []
         y_series = []
         # ref-point
@@ -921,8 +988,7 @@ def plot_promoter(transcript_name, top_x_greatest_hits_dict, target_dir, convert
             reg_width = abs(converted_start - converted_end)
             ax1.bar(reg_x_series, reg_y_series, facecolor='red', edgecolor='red', alpha=alpha_gradient, align = 'center', width=reg_width, label=description)
             alpha_gradient -= alpha_gradient_dict[len(converted_reg_dict)]
-            reg_height += 0.5
-            
+            reg_height += 0.5  
                             
     # Conservation plot
     ax2.plot(range(-1 * alignment_len + promoter_after_tss, promoter_after_tss), conservation, color='0.55')
@@ -947,11 +1013,7 @@ def plot_promoter(transcript_name, top_x_greatest_hits_dict, target_dir, convert
     ax3.set_yticks(range(0,2))
     ax3.bar(range(-1 * alignment_len + promoter_after_tss, promoter_after_tss), gpc, color = 'black')
 
-##    # Find the highest y value to set y-axis height
-##    y_range.sort()
-##    highest_y = y_range[-1]
-##    tens_y = abs(highest_y/10)
-    
+##    # Find the highest y value to set y-axis height    
     # Set format of the plot(s)
     # Hide x-ticks for first two plots
     plt.setp(ax1.get_xticklabels(), visible=False)
@@ -959,15 +1021,10 @@ def plot_promoter(transcript_name, top_x_greatest_hits_dict, target_dir, convert
     
     # ax1 predicted TFBSs
     num_cols = 6
-##    ax1.legend(bbox_to_anchor=[1.0, 1.11], loc='center right', ncol=num_cols, prop={'size':9})
     ax1.legend(bbox_to_anchor=[0., 1.05, 1.0, .102], loc='center', ncol=num_cols, prop={'size':9}, mode="expand", borderaxespad=0.)
     ax1.axhline(0, color = 'black')
     ax1.set_ylabel("Number of supporting motifs", labelpad = 0)
     ax1.set_yticks(range(-1 * ((tens_y)*10), ((tens_y)*10)+1, 10))
-##    if tens_y > 3:
-##        ax1.set_yticks(range(-40, 41, 10))
-##    else:
-##        ax1.set_yticks(range(-1 * ((tens_y+1)*10), ((tens_y+1)*10)+1, 10))
     title_str = transcript_name + " Predicted TFBSs"
     fig.suptitle(title_str, x=.05, rotation='vertical', fontsize=18)
     ax3.set_xticks(range(-1 * promoter_before_tss, promoter_after_tss + 1, 100))
@@ -991,90 +1048,13 @@ def plot_promoter(transcript_name, top_x_greatest_hits_dict, target_dir, convert
     plt.close()
 
 
-
-
-    
-    
 ################################################################################
 # Initiating Variables #########################################################
 ################################################################################
-##script_dir = os.path.abspath(sys.argv[1])
-##print script_dir
-script_dir = os.path.dirname(__file__)
-
-def get_args():
-    """
-    Retrieve arguments provided by the user.
-    """
-
-    # Instantiate the parser
-    parser = argparse.ArgumentParser(
-        prog="TFBS_analyzer2.py",
-        formatter_class = argparse.RawDescriptionHelpFormatter,
-        description=textwrap.dedent("""\
-            TFBS Footprinting - Identification of conserved vertebrate transcription factor binding sites (TFBSs)')
-
-            ------------------------------------------------------------------------------------------------------
-            Example Usage:
-                simplest:
-                TFBS_analyzer2.py PATH_TO/sample_ids.txt
-
-                all arguments:
-                TFBS_analyzer2.py PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
-            ------------------------------------------------------------------------------------------------------
-            """))
-
-    # Arguments
-    parser.add_argument('t_ids_file', metavar='', type=str,
-                        help='Required: Location of a file containing Ensembl target species transcript ids (see sample file: sample_ids.txt)")')
-    parser.add_argument('--target_species', '-s', metavar='', type=str, default="homo_sapiens",
-                        help='[default: "homo_sapiens"] - Target species (string), options are located at \
-                        (https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#species).\
-                        Conservation of TFs across other species will be based on identifying them in this species first.')
-    parser.add_argument('--species_group', '-g', metavar='', type=str, default="mammals",
-                        help='[default: "mammals"] - Group of species (string) to identify conservation of TFs within.\
-                        Your target species should be a member of this species group (e.g. "homo_sapiens" and "mammals" or "primates".\
-                        Options: "mammals", "primates", "sauropsids", "fish".\
-                        Groups and members are listed at (https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#species)')
-    parser.add_argument('--coverage', '-e', metavar='',choices=("low", "high"), type=str, default="low",
-                        help='[default: "low"] - Which Ensembl EPO alignment of species to use ("low" or "high").  The low coverage contains significantly more species and is recommended.')
-    parser.add_argument('--promoter_before_tss', '-pb', metavar='', type=int, default=900,
-                        help='[default: 900] - Number (integer) of nucleotides upstream of TSS to include in analysis.')
-    parser.add_argument('--promoter_after_tss', '-pa', metavar='', type=int, default=100,
-                        help='[default: 100] - Number (integer) of nucleotides downstream of TSS to include in analysis.')
-    parser.add_argument('--locality_threshold', '-l', metavar='', type=int, default=5,
-                        help='[default: 5] - Nucleotide distance (integer) upstream/downstream in which TF predictions in other species will be included to support a hit in the target species.')
-    parser.add_argument('--conservation_min', '-c', metavar='', type=int, default=10,
-                        help='[default: 2] - Minimum number (integer) of species a predicted TF is found in, in alignment, to be considered conserved.')
-    parser.add_argument('--top_x_tfs', '-tx', metavar='', type=int, default=10,
-                        help='[default: 10] - Number (integer) of unique TFs to include in output .svg figure.')
-    parser.add_argument('--output_dir', '-o', metavar='', type=str, default=os.path.join(script_dir, "Results"),
-                        help=" ".join(['[default:', os.path.join(script_dir, "Results"), '] - Full path of directory where result directories will be output.']))
-    # Functionality to add later
-    ##parser.add_argument('--pval', '-p', type=float, default=0.001, help='P-value (float) for determine score cutoff (range: 0.001 to 0.0000001) [default: 0.001]')
-    ##parser.add_argument('--tf_ids', '-tfs', type=str, help='Optional: Location of a file containing a limited list of TFs to use in scoring alignment [default: all Jaspar TFs]')
-    args = parser.parse_args()
-    transcript_ids_filename = args.t_ids_file
-    species_group = args.species_group
-    target_species = args.target_species
-    coverage = args.coverage
-    locality_threshold = args.locality_threshold
-    strand_length_threshold = args.conservation_min
-    promoter_before_tss = args.promoter_before_tss
-    promoter_after_tss = args.promoter_after_tss
-    top_x_tfs_count = args.top_x_tfs
-    output_dir = args.output_dir
-    
-    
-
-    return args, transcript_ids_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir
-
-
 args, transcript_ids_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir = get_args()
 
 # Create directory for results
 directory_creator(output_dir)
-
 
 # analysis variables
 # dictionary of thresholds for each TF
@@ -1093,7 +1073,6 @@ logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), str(vars(args))]))
 
 transcript_ids_list = parse_transcript_ids(transcript_ids_filename)
 for transcript_id in transcript_ids_list:
-    print transcript_id
     logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), transcript_id]))
     target_dir_name = "_".join([transcript_id, species_group])
     target_dir = os.path.join(output_dir, target_dir_name)
@@ -1146,8 +1125,7 @@ for transcript_id in transcript_ids_list:
 
 total_time_end = time.time()
 logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "total time for", str(len(transcript_ids_list)), "transcripts:", str(total_time_end - total_time_start), "seconds"]) + "\n\n")
-print "Total time for", len(transcript_ids_list), "transcripts:", total_time_end - total_time_start, "seconds"
-print " ".join(["See", output_dir, "for final results and logfile"])
+
 
 
 
