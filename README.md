@@ -1,4 +1,4 @@
-##TFBS_analyzer2
+##TFBS_footprinting
 =================
 Pipeline: Identification of cis-regulatory elements by matrix scoring and conservation across groups of species (mammals, primates, sauropsids, fish) catalogued in the Ensembl database.
 
@@ -11,19 +11,19 @@ Model organisms such as mouse and zebrafish.
 39 Mammals
 ee the Ensembl species groups to plan your analysis: https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json
 
+### 2.1 Installation
+- `pip install TFBS_footprinting`
 
-### 2.1 Dependencies
-- `git clone https://github.com/thirtysix/TFBS_footprinting.git`
-- Python 2.7
-- Numpy `sudo apt-get install python-numpy`
-- Biopython `sudo apt-get install python-biopython`
-- matplotlib `sudo apt-get install python-matplotlib`
+### 2.2 Dependencies
 - Currently only tested on Linux
+- Python 2.7
+- Installed by Pip automatically: Http2, Numpy, Biopython, Matplotlib
 
-### 2.2 User Input Examples
+
+### 2.3 User Input Examples
 ```
-$ TFBS_analyzer2.py PATH_TO/sample_ids.txt
-$ TFBS_analyzer2.py PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
+$ TFBS_footprinter PATH_TO/sample_ids.txt
+$ TFBS_footprinter PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
 ```
 
 ### 2.3 Arguments
@@ -45,7 +45,7 @@ Location of a file containing Ensembl target_species transcript ids (see sample 
 - --conservation_min , -c 
 [default: 2] - Minimum number (integer) of species apredicted TF is found in, in alignment, to beconsidered conserved.
 - --top_x_tfs , -tx [default: 10] - Number (integer) of unique TFs toinclude in output .svg figure.
-- --output_dir , -o [default: /home/harlan/Dropbox/manuscripts/tfbs_footprinting/8.somewhere/scripts/testing/Results ] - Fullpath of directory where result directories will beoutput.
+- --output_dir , -o [default: CURRENT_DIR/tfbs_esults] - Fullpath of directory where result directories will be output.
 
 
 ## 3 Process
