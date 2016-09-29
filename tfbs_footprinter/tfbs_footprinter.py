@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Python vers. 2.7.0 ###########################################################
-__version__ = "1.0.0b17"
+__version__ = "1.0.0b19"
 
 
 # Libraries ####################################################################
@@ -70,28 +70,43 @@ def get_args():
 
     # Arguments
     parser.add_argument('t_ids_file', metavar='', type=str,
-                        help='Required: Location of a file containing Ensembl target species transcript ids (see sample file: sample_ids.txt)")')
-    parser.add_argument('--target_species', '-s', metavar='', type=str, default="homo_sapiens",
+                        help='Required: Location of a file containing Ensembl target_species transcript ids (see sample file: sample_ids.txt)")')
+    parser.add_argument('--target_species', '-s', metavar='', choices = ['ailuropoda_melanoleuca', 'anas_platyrhynchos', 'anolis_carolinensis',
+                                                                         'astyanax_mexicanus', 'bos_taurus', 'callithrix_jacchus', 'canis_familiaris',
+                                                                         'cavia_porcellus', 'chlorocebus_sabaeus', 'choloepus_hoffmanni', 'danio_rerio',
+                                                                         'dasypus_novemcinctus', 'dipodomys_ordii', 'echinops_telfairi', 'equus_caballus',
+                                                                         'erinaceus_europaeus', 'felis_catus', 'ficedula_albicollis', 'gadus_morhua',
+                                                                         'gallus_gallus', 'gasterosteus_aculeatus', 'gorilla_gorilla', 'homo_sapiens',
+                                                                         'ictidomys_tridecemlineatus', 'lepisosteus_oculatus', 'loxodonta_africana',
+                                                                         'macaca_mulatta', 'meleagris_gallopavo', 'microcebus_murinus', 'mus_musculus',
+                                                                         'mustela_putorius_furo', 'myotis_lucifugus', 'nomascus_leucogenys',
+                                                                         'ochotona_princeps', 'oreochromis_niloticus', 'oryctolagus_cuniculus',
+                                                                         'oryzias_latipes', 'otolemur_garnettii', 'ovis_aries', 'pan_troglodytes',
+                                                                         'papio_anubis', 'pelodiscus_sinensis', 'poecilia_formosa', 'pongo_abelii',
+                                                                         'procavia_capensis', 'pteropus_vampyrus', 'rattus_norvegicus', 'sorex_araneus',
+                                                                         'sus_scrofa', 'taeniopygia_guttata', 'takifugu_rubripes', 'tarsius_syrichta',
+                                                                         'tetraodon_nigroviridis', 'tupaia_belangeri', 'tursiops_truncatus', 'vicugna_pacos',
+                                                                         'xiphophorus_maculatus'],
+                        type=str, default="homo_sapiens",
                         help='[default: "homo_sapiens"] - Target species (string), options are located at \
                         (https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#species).\
                         Conservation of TFs across other species will be based on identifying them in this species first.')
-    parser.add_argument('--species_group', '-g', metavar='', type=str, default="mammals",
-                        help='[default: "mammals"] - Group of species (string) to identify conservation of TFs within.\
+    parser.add_argument('--species_group', '-g', metavar='', choices = ["mammals", "primates", "fish", "sauropsids"], type=str, default="mammals",
+                        help='("mammals", "primates", "sauropsids",  or "fish") [default: "mammals"] - Group of species (string) to identify conservation of TFs within.\
                         Your target species should be a member of this species group (e.g. "homo_sapiens" and "mammals" or "primates".\
-                        Options: "mammals", "primates", "sauropsids", "fish".\
                         Groups and members are listed at (https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#species)')
     parser.add_argument('--coverage', '-e', metavar='',choices=("low", "high"), type=str, default="low",
-                        help='[default: "low"] - Which Ensembl EPO alignment of species to use ("low" or "high").  The low coverage contains significantly more species and is recommended.')
-    parser.add_argument('--promoter_before_tss', '-pb', metavar='', type=int, default=900,
-                        help='[default: 900] - Number (integer) of nucleotides upstream of TSS to include in analysis.')
-    parser.add_argument('--promoter_after_tss', '-pa', metavar='', type=int, default=100,
-                        help='[default: 100] - Number (integer) of nucleotides downstream of TSS to include in analysis.')
-    parser.add_argument('--locality_threshold', '-l', metavar='', type=int, default=5,
-                        help='[default: 5] - Nucleotide distance (integer) upstream/downstream in which TF predictions in other species will be included to support a hit in the target species.')
+                        help='("low" or "high") [default: "low"] - Which Ensembl EPO alignment of species to use.  The low coverage contains significantly more species and is recommended.')
+    parser.add_argument('--promoter_before_tss', '-pb', metavar='', choices = range(0, 100001), type=int, default=900,
+                        help='(0-100,000) [default: 900] - Number (integer) of nucleotides upstream of TSS to include in analysis (0-100,000).')
+    parser.add_argument('--promoter_after_tss', '-pa', metavar='', choices = range(0, 100001), type=int, default=100,
+                        help='(0-100,000) [default: 100] - Number (integer) of nucleotides downstream of TSS to include in analysis.')
+    parser.add_argument('--locality_threshold', '-l', metavar='', choices = range(0, 101), type=int, default=5,
+                        help='(0-100) [default: 5] - Nucleotide distance (integer) upstream/downstream in which TF predictions in other species will be included to support a hit in the target species.')
     parser.add_argument('--conservation_min', '-c', metavar='', type=int, default=10,
-                        help='[default: 2] - Minimum number (integer) of species a predicted TF is found in, in alignment, to be considered conserved.')
-    parser.add_argument('--top_x_tfs', '-tx', metavar='', type=int, default=10,
-                        help='[default: 10] - Number (integer) of unique TFs to include in output .svg figure.')
+                        help='(1-20)[default: 2] - Minimum number (integer) of species a predicted TF is found in, in alignment, to be considered conserved .')
+    parser.add_argument('--top_x_tfs', '-tx', metavar='', choices = range(1, 21), type=int, default=10,
+                        help='(1-20) [default: 10] - Number (integer) of unique TFs to include in output .svg figure.')
     parser.add_argument('--output_dir', '-o', metavar='', type=str, default=os.path.join(curdir, "tfbs_results"),
                         help=" ".join(['[default:', os.path.join(curdir, "tfbs_results"), '] - Full path of directory where result directories will be output.']))
     # Functionality to add later
@@ -410,10 +425,10 @@ def unaligned2aligned_indexes(cleaned_aligned_filename):
 
 def find_clusters(target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold):
     """
-    for each human hit, find all hits in other species within the locality_threshold.
+    for each target species hit, find all hits in other species within the locality_threshold.
     identify the highest score for each species within the locality threshold
-    create combined affinity score from the human hit and those best scores from each species
-    if two human hits are within the locality threshold from one another, choose the hit which has the highest combined affinity score
+    create combined affinity score from the target species hit and those best scores from each species
+    if two target species hits are within the locality threshold from one another, choose the hit which has the highest combined affinity score
 
     2. possibility
     """
@@ -422,31 +437,31 @@ def find_clusters(target_species, tfbss_found_dict, cleaned_aligned_filename, st
     for tf_name, hits in tfbss_found_dict.iteritems():
         cluster_dict[tf_name] = [] 
         clusters = []
-        human_seeds = []
+        target_hit_seeds = []
         
-        # identify all human hits for this tf_name
+        # identify all target_species hits for this tf_name
         for hit in hits:
             # ref-point
             if hit[1].lower() == target_species:
-                human_seeds.append(hit)
+                target_hit_seeds.append(hit)
 
-        # sort all human hits by some criteria: e.g. pwm score ### not necessary in this implementation
+        # sort all target_species hits by some criteria: e.g. pwm score ### not necessary in this implementation
         # ref-point
-        human_seeds = sorted(human_seeds, key = itemgetter(8), reverse=True)
+        target_hit_seeds = sorted(target_hit_seeds, key = itemgetter(8), reverse=True)
 
-        # for each human hit, find first all other hits in all other species within the locality threshold
+        # for each target_species hit, find first all other hits in all other species within the locality threshold
         # select the best scoring hit from each species from these
-        for human_seed in human_seeds:
-            cluster = [human_seed]
-            human_strand = human_seed[3]
+        for target_hit_seed in target_hit_seeds:
+            cluster = [target_hit_seed]
+            target_species_strand = target_hit_seed[3]
             support_candidates = []
             cluster_added_species = []
                 
             for hit in hits:
                 # ref-point
                 hit_strand = hit[3]
-                # add a hit to support candidates if it is within the locality threshold, is on the same strand as the human seed, and is not a human seed
-                if abs(human_seed[-1] - hit[-1]) <= locality_threshold and hit_strand == human_strand and hit not in human_seeds:
+                # add a hit to support candidates if it is within the locality threshold, is on the same strand as the target_species seed, and is not a target_species seed
+                if abs(target_hit_seed[-1] - hit[-1]) <= locality_threshold and hit_strand == target_species_strand and hit not in target_hit_seeds:
                     support_candidates.append(hit)
 
             # sort the support candidates by their scores
@@ -466,13 +481,13 @@ def find_clusters(target_species, tfbss_found_dict, cleaned_aligned_filename, st
             if len(cluster) >= strand_length_threshold:
                 cluster_dict[tf_name].append(cluster)    
     
-    # Calculate combined affinity score for clusters, attach to human hit
+    # Calculate combined affinity score for clusters, attach to target_species hit
     for tf_name, clusters in cluster_dict.iteritems():
         for cluster in clusters:
             # ref-point
             combined_affinity_score = sum([hit[8] for hit in cluster])
             cluster[0].append(combined_affinity_score)
-            # add the tfbs support (len cluster) to the human hit
+            # add the tfbs support (len cluster) to the target_species hit
             cluster[0].append(len(cluster))
 
     return cluster_dict
@@ -498,7 +513,7 @@ def cluster_table_writer(cluster_dict, target_dir, name, locality_threshold):
                 writerUS.writerow(spacer_row)
                               
 
-def human_hits_table_writer(sorted_clusters_human_hits_list, target_dir, name, locality_threshold):
+def target_species_hits_table_writer(sorted_clusters_target_species_hits_list, target_dir, name, locality_threshold):
     """4. find best hits and output that list.
     take promoter results and output a .csv file containing all relevant information.
     only print to file those promoter hits which have support at that position."""
@@ -510,36 +525,36 @@ def human_hits_table_writer(sorted_clusters_human_hits_list, target_dir, name, l
         writerUS.writerow(['binding_prot', 'species', 'motif', 'strand', 'start', 'end', 'pre-TSS start', 'pre-TSS end', 'frame score', 'p-value', 'pos in align.', 'combined affinity score', 'support'])
 
         # for all clusters which have pass thresholds, write full cluster to .csv
-        for hit in sorted_clusters_human_hits_list:
+        for hit in sorted_clusters_target_species_hits_list:
             writerUS.writerow([str(x) for x in hit])
 
 
 
-def sort_human_hits(cluster_dict):
+def sort_target_species_hits(cluster_dict):
     """
-    Sort human hits which are part of a cluster by combined affinity score.
+    Sort target_species hits which are part of a cluster by combined affinity score.
     """
-    sorted_clusters_human_hits_dict = {}
-    sorted_clusters_human_hits_list = []
+    sorted_clusters_target_species_hits_dict = {}
+    sorted_clusters_target_species_hits_list = []
     
-    # create a sorted list of the human hits from clusters
+    # create a sorted list of the target_species hits from clusters
     for tf_name, clusters in cluster_dict.iteritems():
-        clusters_human_hits = []
+        clusters_target_species_hits = []
             
         for cluster in clusters:
-            clusters_human_hit = cluster[0]
-            clusters_human_hits.append(clusters_human_hit)
-            sorted_clusters_human_hits_list.append(clusters_human_hit)
+            clusters_target_species_hit = cluster[0]
+            clusters_target_species_hits.append(clusters_target_species_hit)
+            sorted_clusters_target_species_hits_list.append(clusters_target_species_hit)
 
     # ref-point     
-        sorted_clusters_human_hits_dict[tf_name] = clusters_human_hits
+        sorted_clusters_target_species_hits_dict[tf_name] = clusters_target_species_hits
         
-    sorted_clusters_human_hits_list = sorted(sorted_clusters_human_hits_list, key=itemgetter(11), reverse = True)
+    sorted_clusters_target_species_hits_list = sorted(sorted_clusters_target_species_hits_list, key=itemgetter(11), reverse = True)
 
-    return sorted_clusters_human_hits_dict, sorted_clusters_human_hits_list
+    return sorted_clusters_target_species_hits_dict, sorted_clusters_target_species_hits_list
 
 
-def top_x_greatest_hits(sorted_clusters_human_hits_list, top_x_tfs_count):
+def top_x_greatest_hits(sorted_clusters_target_species_hits_list, top_x_tfs_count):
     """
     Identify the best scoring hits up to some threshold of number of tfs.
     Allows plotting more than one instance of a top tf, without increasing the total tf used count.
@@ -554,9 +569,9 @@ def top_x_greatest_hits(sorted_clusters_human_hits_list, top_x_tfs_count):
     # add all hits to single pool so top hits can be identified
     
 
-    for sorted_clusters_human_hit in sorted_clusters_human_hits_list:
+    for sorted_clusters_target_species_hit in sorted_clusters_target_species_hits_list:
         # ref-point
-        tf_name = sorted_clusters_human_hit[0]
+        tf_name = sorted_clusters_target_species_hit[0]
         if (len(top_x_tfs) < top_x_tfs_count):
 
             # keep track of what & how many tfs have been added
@@ -565,10 +580,10 @@ def top_x_greatest_hits(sorted_clusters_human_hits_list, top_x_tfs_count):
 
             # add the hit to the top hits if the count threshold has not been met
             if tf_name in top_x_greatest_hits_dict:
-                top_x_greatest_hits_dict[tf_name].append(sorted_clusters_human_hit)    
+                top_x_greatest_hits_dict[tf_name].append(sorted_clusters_target_species_hit)    
                 
             else:
-                top_x_greatest_hits_dict[tf_name] = [sorted_clusters_human_hit]
+                top_x_greatest_hits_dict[tf_name] = [sorted_clusters_target_species_hit]
 
     return top_x_greatest_hits_dict
 
@@ -577,7 +592,7 @@ def top_x_greatest_hits(sorted_clusters_human_hits_list, top_x_tfs_count):
 # Alignment Manipulation #######################################################
 ################################################################################
 def retrieve_genome_aligned(species_group, target_species, chromosome, strand, promoter_start, promoter_end, coverage):
-    """Takes as input human CCDS start position and size of promoter to be extracted.  Retrieves genome aligned,
+    """Takes as input target_species CCDS start position and size of promoter to be extracted.  Retrieves genome aligned,
     corresponding regions in all orthologs."""
 
     # Retrieve alignment if alignment FASTA does not already exist  
@@ -664,19 +679,19 @@ def remove_duplicate_species(alignment):
 
 
 def selective_alignment(alignment):
-    """Remove sequences from the alignment if they have less then 75% of the nucleotides of the human sequence."""
+    """Remove sequences from the alignment if they have less then 75% of the nucleotides of the target_species sequence."""
 
-    human_entry = alignment[0]
-    human_seq_2nd_half = human_entry['seq'][len(human_entry['seq'])/2:]
-    human_seq_2nd_half = human_seq_2nd_half.replace("-","").replace("N","").replace(" ","").replace(".","")
-    human_seq_2nd_half_len = len(human_seq_2nd_half)
+    target_species_entry = alignment[0]
+    target_species_seq_2nd_half = target_species_entry['seq'][len(target_species_entry['seq'])/2:]
+    target_species_seq_2nd_half = target_species_seq_2nd_half.replace("-","").replace("N","").replace(" ","").replace(".","")
+    target_species_seq_2nd_half_len = len(target_species_seq_2nd_half)
 
     cleaned_alignment = []
     for entry in alignment:
         entry_seq_2nd_half = entry['seq'][len(entry['seq'])/2:]
         entry_seq_2nd_half = entry_seq_2nd_half.replace("-","").replace("N","").replace(" ","").replace(".","")      
         entry_seq_2nd_half_len = len(entry_seq_2nd_half)
-        if float(entry_seq_2nd_half_len)/human_seq_2nd_half_len >= 0.75:
+        if float(entry_seq_2nd_half_len)/target_species_seq_2nd_half_len >= 0.75:
             cleaned_alignment.append(entry)
 
     return cleaned_alignment
@@ -844,38 +859,38 @@ def alignment_conservation(aligned_filename):
     """Identify basic conservation of DNA sequence in the alignment."""
 
     alignment = AlignIO.read(aligned_filename, "fasta")
-    human_row = alignment[0]
+    target_species_row = alignment[0]
     species_num = float(len(alignment))
     conservation = []
-    for i in range(0, len(human_row)):
+    for i in range(0, len(target_species_row)):
         
-        human_nuc = human_row[i]
-        if human_nuc != "-":
+        target_species_nuc = target_species_row[i]
+        if target_species_nuc != "-":
             alignment_col = alignment[:,i]
             common_char = collections.Counter(alignment_col).most_common()[0][0]
             char_count = collections.Counter(alignment_col).most_common()[0][1]
             if common_char != '-':
                 col_conservation = char_count/species_num
             else:
-                col_conservation = alignment_col.count(human_nuc)/species_num
+                col_conservation = alignment_col.count(target_species_nuc)/species_num
             conservation.append(col_conservation)
 
     return conservation
 
 
 def CpG(aligned_filename):
-    """Score the CpG content of the human sequence over a 200 nt window."""
+    """Score the CpG content of the target_species sequence over a 200 nt window."""
 
     alignment = AlignIO.read(aligned_filename, "fasta")
-    human_row = alignment[0]
+    target_species_row = alignment[0]
     cpg_list = []
 
     # [1 C, 1 if G, 1 if CPG, CorG, num_cpg, obs2exp]
-    for i in range(0, len(human_row)):     
-        current_pos = human_row[i]
+    for i in range(0, len(target_species_row)):     
+        current_pos = target_species_row[i]
         if current_pos != '-':
-            if i < len(human_row) - 1:
-                next_pos = human_row[i+1]
+            if i < len(target_species_row) - 1:
+                next_pos = target_species_row[i+1]
             else:
                 next_pos = False
              
@@ -1133,55 +1148,23 @@ def main():
                 # score alignment for tfbss
                 tfbss_found_dict = tfbs_finder(transcript_name, alignment, TFBS_matrix_dict, target_dir, pwm_score_threshold_dict, unaligned2aligned_index_dict, promoter_after_tss)
 
-                # sort through scores, identify hits in human supported in other species
+                # sort through scores, identify hits in target_species supported in other species
                 cluster_dict = find_clusters(target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold)
 
                 # write cluster entries to .csv
                 cluster_table_writer(cluster_dict, target_dir, ".clusters.", locality_threshold)
 
-                # sort the human hits supported by other species
-                sorted_clusters_human_hits_dict, sorted_clusters_human_hits_list = sort_human_hits(cluster_dict)
-                human_hits_table_writer(sorted_clusters_human_hits_list, target_dir, ".sortedclusters.", locality_threshold)
+                # sort the target_species hits supported by other species
+                sorted_clusters_target_species_hits_dict, sorted_clusters_target_species_hits_list = sort_target_species_hits(cluster_dict)
+                target_species_hits_table_writer(sorted_clusters_target_species_hits_list, target_dir, ".sortedclusters.", locality_threshold)
                 
-                # extract the top x human hits supported by other species
-                top_x_greatest_hits_dict = top_x_greatest_hits(sorted_clusters_human_hits_list, top_x_tfs_count)
+                # extract the top x target_species hits supported by other species
+                top_x_greatest_hits_dict = top_x_greatest_hits(sorted_clusters_target_species_hits_list, top_x_tfs_count)
 
-                # plot the top x human hits
+                # plot the top x target_species hits
                 if len(top_x_greatest_hits_dict) > 0:
                     plot_promoter(alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, conservation, cpg_list)
 
 
     total_time_end = time.time()
     logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "total time for", str(len(transcript_ids_list)), "transcripts:", str(total_time_end - total_time_start), "seconds"]) + "\n\n")
-
-
-
-
-
-
-
-
-
-
-
-
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-    

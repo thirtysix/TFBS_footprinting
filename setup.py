@@ -37,7 +37,7 @@ setup(
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
     # remove after debugging
-     version='1.0.0b17',
+     version='1.0.0b19',
 
     description='Tool for identifying conserved TFBSs in vertebrate species.',
     long_description=long_description,
