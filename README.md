@@ -17,12 +17,14 @@ ee the Ensembl species groups to plan your analysis: https://rest.ensembl.org/in
 ### 2.2 Dependencies
 - Currently only tested on Linux
 - Python 2.7
-- Installed by Pip automatically: Http2, Numpy, Biopython, Matplotlib
+- Installed by *pip* automatically: Http2, Numpy, Biopython, Matplotlib
 
 
-### 2.3 User Input Examples
+### 2.3 User Input Examples - File of Ensembl Transcript IDs
 ![sample_ids](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_ids.txt.png)
 
+
+### 2.3 User Input Examples - Command Line
 ```
 $ TFBS_footprinter PATH_TO/sample_ids.txt
 $ TFBS_footprinter PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
