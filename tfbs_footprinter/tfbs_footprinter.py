@@ -29,6 +29,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from pylab import*
 from numpy import random as numpyrandom
+from numpy import log10 as numpylog
 
 from operator import itemgetter
 import collections
@@ -70,23 +71,19 @@ def get_args():
 
     # Arguments
     parser.add_argument('t_ids_file', metavar='', type=str,
-                        help='Required: Location of a file containing Ensembl target_species transcript ids (see sample file: sample_ids.txt)")')
-    parser.add_argument('--target_species', '-s', metavar='', choices = ['ailuropoda_melanoleuca', 'anas_platyrhynchos', 'anolis_carolinensis',
-                                                                         'astyanax_mexicanus', 'bos_taurus', 'callithrix_jacchus', 'canis_familiaris',
-                                                                         'cavia_porcellus', 'chlorocebus_sabaeus', 'choloepus_hoffmanni', 'danio_rerio',
-                                                                         'dasypus_novemcinctus', 'dipodomys_ordii', 'echinops_telfairi', 'equus_caballus',
-                                                                         'erinaceus_europaeus', 'felis_catus', 'ficedula_albicollis', 'gadus_morhua',
-                                                                         'gallus_gallus', 'gasterosteus_aculeatus', 'gorilla_gorilla', 'homo_sapiens',
-                                                                         'ictidomys_tridecemlineatus', 'lepisosteus_oculatus', 'loxodonta_africana',
-                                                                         'macaca_mulatta', 'meleagris_gallopavo', 'microcebus_murinus', 'mus_musculus',
-                                                                         'mustela_putorius_furo', 'myotis_lucifugus', 'nomascus_leucogenys',
-                                                                         'ochotona_princeps', 'oreochromis_niloticus', 'oryctolagus_cuniculus',
-                                                                         'oryzias_latipes', 'otolemur_garnettii', 'ovis_aries', 'pan_troglodytes',
-                                                                         'papio_anubis', 'pelodiscus_sinensis', 'poecilia_formosa', 'pongo_abelii',
-                                                                         'procavia_capensis', 'pteropus_vampyrus', 'rattus_norvegicus', 'sorex_araneus',
-                                                                         'sus_scrofa', 'taeniopygia_guttata', 'takifugu_rubripes', 'tarsius_syrichta',
-                                                                         'tetraodon_nigroviridis', 'tupaia_belangeri', 'tursiops_truncatus', 'vicugna_pacos',
-                                                                         'xiphophorus_maculatus'],
+                        help='Required: Location of a file containing Ensembl target_species transcript ids (see sample file sample_ids.txt at https://github.com/thirtysix/TFBS_footprinting)")')
+    parser.add_argument('--target_species', '-s', metavar='', choices = ['ailuropoda_melanoleuca', 'anas_platyrhynchos', 'anolis_carolinensis', 'astyanax_mexicanus',
+                                                                         'bos_taurus', 'callithrix_jacchus', 'canis_familiaris', 'cavia_porcellus', 'chlorocebus_sabaeus',
+                                                                         'choloepus_hoffmanni', 'danio_rerio', 'dasypus_novemcinctus', 'dipodomys_ordii', 'echinops_telfairi',
+                                                                         'equus_caballus', 'erinaceus_europaeus', 'felis_catus', 'ficedula_albicollis', 'gadus_morhua',
+                                                                         'gallus_gallus', 'gasterosteus_aculeatus', 'gorilla_gorilla', 'homo_sapiens', 'ictidomys_tridecemlineatus',
+                                                                         'lepisosteus_oculatus', 'loxodonta_africana', 'macaca_mulatta', 'meleagris_gallopavo', 'microcebus_murinus',
+                                                                         'mus_musculus', 'mus_spretus_spreteij', 'mustela_putorius_furo', 'myotis_lucifugus', 'nomascus_leucogenys',
+                                                                         'ochotona_princeps', 'oreochromis_niloticus', 'oryctolagus_cuniculus', 'oryzias_latipes', 'otolemur_garnettii',
+                                                                         'ovis_aries', 'pan_troglodytes', 'papio_anubis', 'pelodiscus_sinensis', 'poecilia_formosa', 'pongo_abelii',
+                                                                         'procavia_capensis', 'pteropus_vampyrus', 'rattus_norvegicus', 'sorex_araneus', 'sus_scrofa',
+                                                                         'taeniopygia_guttata', 'takifugu_rubripes', 'tarsius_syrichta', 'tetraodon_nigroviridis', 'tupaia_belangeri',
+                                                                         'tursiops_truncatus', 'vicugna_pacos', 'xiphophorus_maculatus'],
                         type=str, default="homo_sapiens",
                         help='[default: "homo_sapiens"] - Target species (string), options are located at \
                         (https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#species).\
@@ -94,16 +91,18 @@ def get_args():
     parser.add_argument('--species_group', '-g', metavar='', choices = ["mammals", "primates", "fish", "sauropsids"], type=str, default="mammals",
                         help='("mammals", "primates", "sauropsids",  or "fish") [default: "mammals"] - Group of species (string) to identify conservation of TFs within.\
                         Your target species should be a member of this species group (e.g. "homo_sapiens" and "mammals" or "primates".\
+                        The "primates" group does not have a low-coverage version.\
                         Groups and members are listed at (https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#species)')
     parser.add_argument('--coverage', '-e', metavar='',choices=("low", "high"), type=str, default="low",
-                        help='("low" or "high") [default: "low"] - Which Ensembl EPO alignment of species to use.  The low coverage contains significantly more species and is recommended.')
+                        help='("low" or "high") [default: "low"] - Which Ensembl EPO alignment of species to use.  The low coverage contains significantly more species and is recommended.\
+                        The primate group does not have a low-coverage version.')
     parser.add_argument('--promoter_before_tss', '-pb', metavar='', choices = range(0, 100001), type=int, default=900,
                         help='(0-100,000) [default: 900] - Number (integer) of nucleotides upstream of TSS to include in analysis (0-100,000).')
     parser.add_argument('--promoter_after_tss', '-pa', metavar='', choices = range(0, 100001), type=int, default=100,
                         help='(0-100,000) [default: 100] - Number (integer) of nucleotides downstream of TSS to include in analysis.')
     parser.add_argument('--locality_threshold', '-l', metavar='', choices = range(0, 101), type=int, default=5,
-                        help='(0-100) [default: 5] - Nucleotide distance (integer) upstream/downstream in which TF predictions in other species will be included to support a hit in the target species.')
-    parser.add_argument('--conservation_min', '-c', metavar='', type=int, default=10,
+                        help='(0-100) [default: 5] - Nucleotide distance (integer) upstream/downstream within which TF predictions in other species will be included to support a hit in the target species.')
+    parser.add_argument('--conservation_min', '-c', metavar='', type=int, default=2,
                         help='(1-20)[default: 2] - Minimum number (integer) of species a predicted TF is found in, in alignment, to be considered conserved .')
     parser.add_argument('--top_x_tfs', '-tx', metavar='', choices = range(1, 21), type=int, default=10,
                         help='(1-20) [default: 10] - Number (integer) of unique TFs to include in output .svg figure.')
@@ -112,6 +111,7 @@ def get_args():
     # Functionality to add later
     ##parser.add_argument('--pval', '-p', type=float, default=0.001, help='P-value (float) for determine score cutoff (range: 0.001 to 0.0000001) [default: 0.001]')
     ##parser.add_argument('--tf_ids', '-tfs', type=str, help='Optional: Location of a file containing a limited list of TFs to use in scoring alignment [default: all Jaspar TFs]')
+    ##parser.add_argument('--noclean', '-nc', action = 'store_true', help='Optional: Don't clean retrieved alignment. Off by default.')
     args = parser.parse_args()
     transcript_ids_filename = args.t_ids_file
     species_group = args.species_group
@@ -1052,7 +1052,8 @@ def plot_promoter(alignment, alignment_len, promoter_before_tss, promoter_after_
     ax1.set_yticks(range(-1 * ((tens_y)*10), ((tens_y)*10)+1, 10))
     title_str = transcript_name + " Predicted TFBSs"
     fig.suptitle(title_str, x=.05, rotation='vertical', fontsize=18)
-    ax3.set_xticks(range(-1 * promoter_before_tss, promoter_after_tss + 1, 100))
+    xtick_jump = 10 ** (int(numpylog(promoter_before_tss + promoter_after_tss)) - 1)
+    ax3.set_xticks(range(-1 * promoter_before_tss, promoter_after_tss + 1, xtick_jump))
 
     # ax2 conservation
     ax2.set_yticks([0, 1])
