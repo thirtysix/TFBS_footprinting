@@ -24,13 +24,13 @@ ee the Ensembl species groups to plan your analysis: https://rest.ensembl.org/in
 ![sample_ids](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_ids.txt.png)
 
 
-### 2.3 User Input Examples - Command Line
+### 2.4 User Input Examples - Command Line
 ```
 $ TFBS_footprinter PATH_TO/sample_ids.txt
 $ TFBS_footprinter PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
 ```
 
-### 2.3 Arguments
+### 2.5 Arguments
 - positional arguments:
 Location of a file containing Ensembl target_species transcript ids (see sample file: sample_ids.txt)")
 
