@@ -21,6 +21,8 @@ ee the Ensembl species groups to plan your analysis: https://rest.ensembl.org/in
 
 
 ### 2.3 User Input Examples
+![sample_ids](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_ids.txt.png)
+
 ```
 $ TFBS_footprinter PATH_TO/sample_ids.txt
 $ TFBS_footprinter PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
@@ -31,7 +33,7 @@ $ TFBS_footprinter PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -pb 900 -pa
 Location of a file containing Ensembl target_species transcript ids (see sample file: sample_ids.txt)")
 
 - --target_species , -s 
-[default: "homo_sapiens"] - Target species (string),options are located at (https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json). Conservation of TFs acrossother species will be based on identifying them inthis species first.
+[default: "homo_sapiens"] - Target species (string), options are located at (https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json). Conservation of TFs acrossother species will be based on identifying them inthis species first.
 - --species_group , -g 
 [default: "mammals"] - Group of species (string) toidentify conservation of TFs within. Your targetspecies should be a member of this species group (e.g."homo_sapiens" and "mammals" or "primates". Options:"mammals", "primates", "sauropsids", "fish". Groupsand members are listed at (https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json)
 - --coverage , -e
@@ -55,7 +57,7 @@ Iterate through each user provided Ensembl transcript id:
 - Remove species sequences that are less than 75% length of target_species sequence.
 - Replace characters not corresponding to nucleotides (ACGT), with gaps characters "-".
 - Remove gap-only columns from alignment.
- 3. Generate position weight matrices (PWMs) from Jaspar position frequency matrices (PFMs).
+ 3. Generate position weight matrices (PWMs) from 519 TF Jaspar position frequency matrices (PFMs) for each species sequence based on nt background frequencies of target sequence.
  4. Score each species sequence in the alignment using all PWMs.
  5. Keep predictions with a score greater than score threshold corresponding to p-value of 0.001.
  6. Identify predicted TFBSs in target_species which are conserved in non-target_species species of the the species_group within the locality_threshold and totaling at least conservation_min.
