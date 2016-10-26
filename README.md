@@ -31,25 +31,81 @@ $ TFBS_footprinter PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -pb 900 -pa
 ```
 
 ### 2.5 Arguments
-- positional arguments:
-Location of a file containing Ensembl target_species transcript ids (see sample file: sample_ids.txt)")
+```
+usage: TFBS_analyzer2.py [-h] [--tf_ids_file] [--target_species]
+                         [--species_group] [--coverage]
+                         [--promoter_before_tss] [--promoter_after_tss]
+                         [--locality_threshold] [--conservation_min]
+                         [--top_x_tfs] [--output_dir]
 
-- --target_species , -s 
-[default: "homo_sapiens"] - Target species (string), options are located at (https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json). Conservation of TFs acrossother species will be based on identifying them inthis species first.
-- --species_group , -g 
-[default: "mammals"] - Group of species (string) toidentify conservation of TFs within. Your targetspecies should be a member of this species group (e.g."homo_sapiens" and "mammals" or "primates". Options:"mammals", "primates", "sauropsids", "fish". Groupsand members are listed at (https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json)
-- --coverage , -e
-[default: "low"] - Which Ensembl EPO alignment of species to use ("low" or "high"). The low coverage contains significantly more species and is recommended.
-- --promoter_before_tss , -pb 
-[default: 900] - Number (integer) of nucleotidesupstream of TSS to include in analysis.
-- --promoter_after_tss , -pa 
-[default: 100] - Number (integer) of nucleotidesdownstream of TSS to include in analysis.
-- --locality_threshold , -l 
-[default: 5] - Nucleotide distance (integer)upstream/downstream in which TF predictions in otherspecies will be included to support a hit in the target species.
-- --conservation_min , -c 
-[default: 2] - Minimum number (integer) of species apredicted TF is found in, in alignment, to beconsidered conserved.
-- --top_x_tfs , -tx [default: 10] - Number (integer) of unique TFs toinclude in output .svg figure.
-- --output_dir , -o [default: CURRENT_DIR/tfbs_esults] - Fullpath of directory where result directories will be output.
+TFBS Footprinting - Identification of conserved vertebrate transcription factor binding sites (TFBSs)')
+
+------------------------------------------------------------------------------------------------------
+Example Usage:
+    simplest:
+    TFBS_analyzer2.py PATH_TO/sample_ids.txt
+
+    all arguments:
+    TFBS_analyzer2.py PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
+------------------------------------------------------------------------------------------------------
+
+positional arguments:
+                        Required: Location of a file containing Ensembl
+                        target_species transcript ids (see sample file
+                        sample_ids.txt at
+                        https://github.com/thirtysix/TFBS_footprinting)")
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --tf_ids_file , -tfs 
+                        Optional: Location of a file containing a limited list
+                        of Jaspar TFs to use in scoring alignment (see sample
+                        file tf_ids.txt at
+                        https://github.com/thirtysix/TFBS_footprinting)
+                        [default: all Jaspar TFs]
+  --target_species , -s 
+                        [default: "homo_sapiens"] - Target species (string),
+                        options are located at (https://github.com/thirtysix/T
+                        FBS_footprinting/blob/master/README.md#species).
+                        Conservation of TFs across other species will be based
+                        on identifying them in this species first.
+  --species_group , -g 
+                        ("mammals", "primates", "sauropsids", or "fish")
+                        [default: "mammals"] - Group of species (string) to
+                        identify conservation of TFs within. Your target
+                        species should be a member of this species group (e.g.
+                        "homo_sapiens" and "mammals" or "primates"). The
+                        "primates" group does not have a low-coverage version.
+                        Groups and members are listed at (https://github.com/t
+                        hirtysix/TFBS_footprinting/blob/master/README.md#speci
+                        es)
+  --coverage , -e       ("low" or "high") [default: "low"] - Which Ensembl EPO
+                        alignment of species to use. The low coverage contains
+                        significantly more species and is recommended. The
+                        primate group does not have a low-coverage version.
+  --promoter_before_tss , -pb 
+                        (0-100,000) [default: 900] - Number (integer) of
+                        nucleotides upstream of TSS to include in analysis
+                        (0-100,000).
+  --promoter_after_tss , -pa 
+                        (0-100,000) [default: 100] - Number (integer) of
+                        nucleotides downstream of TSS to include in analysis.
+  --locality_threshold , -l 
+                        (0-100) [default: 5] - Nucleotide distance (integer)
+                        upstream/downstream within which TF predictions in
+                        other species will be included to support a hit in the
+                        target species.
+  --conservation_min , -c 
+                        (1-20)[default: 2] - Minimum number (integer) of
+                        species a predicted TF is found in, in alignment, to
+                        be considered conserved .
+  --top_x_tfs , -tx     (1-20) [default: 10] - Number (integer) of unique TFs
+                        to include in output .svg figure.
+  --output_dir , -o     [default: /home/harlan/Dropbox/github/TFBS_footprintin
+                        g/tfbs_results ] - Full path of directory where result
+                        directories will be output.
+
+```
 
 
 ## 3 Process
