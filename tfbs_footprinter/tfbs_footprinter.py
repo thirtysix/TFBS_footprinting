@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Python vers. 2.7.0 ###########################################################
-__version__ = "1.0.0b19"
+__version__ = "1.0.0b21"
 
 
 # Libraries ####################################################################
@@ -72,6 +72,8 @@ def get_args():
     # Arguments
     parser.add_argument('t_ids_file', metavar='', type=str,
                         help='Required: Location of a file containing Ensembl target_species transcript ids (see sample file sample_ids.txt at https://github.com/thirtysix/TFBS_footprinting)")')
+    parser.add_argument('--tf_ids_file', '-tfs', type=str, default = None, help='Optional: Location of a file containing a limited list of TFs to use in scoring alignment [default: all Jaspar TFs]')
+
     parser.add_argument('--target_species', '-s', metavar='', choices = ['ailuropoda_melanoleuca', 'anas_platyrhynchos', 'anolis_carolinensis', 'astyanax_mexicanus',
                                                                          'bos_taurus', 'callithrix_jacchus', 'canis_familiaris', 'cavia_porcellus', 'chlorocebus_sabaeus',
                                                                          'choloepus_hoffmanni', 'danio_rerio', 'dasypus_novemcinctus', 'dipodomys_ordii', 'echinops_telfairi',
@@ -90,7 +92,7 @@ def get_args():
                         Conservation of TFs across other species will be based on identifying them in this species first.')
     parser.add_argument('--species_group', '-g', metavar='', choices = ["mammals", "primates", "fish", "sauropsids"], type=str, default="mammals",
                         help='("mammals", "primates", "sauropsids",  or "fish") [default: "mammals"] - Group of species (string) to identify conservation of TFs within.\
-                        Your target species should be a member of this species group (e.g. "homo_sapiens" and "mammals" or "primates".\
+                        Your target species should be a member of this species group (e.g. "homo_sapiens" and "mammals" or "primates").\
                         The "primates" group does not have a low-coverage version.\
                         Groups and members are listed at (https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#species)')
     parser.add_argument('--coverage', '-e', metavar='',choices=("low", "high"), type=str, default="low",
@@ -110,10 +112,11 @@ def get_args():
                         help=" ".join(['[default:', os.path.join(curdir, "tfbs_results"), '] - Full path of directory where result directories will be output.']))
     # Functionality to add later
     ##parser.add_argument('--pval', '-p', type=float, default=0.001, help='P-value (float) for determine score cutoff (range: 0.001 to 0.0000001) [default: 0.001]')
-    ##parser.add_argument('--tf_ids', '-tfs', type=str, help='Optional: Location of a file containing a limited list of TFs to use in scoring alignment [default: all Jaspar TFs]')
+
     ##parser.add_argument('--noclean', '-nc', action = 'store_true', help='Optional: Don't clean retrieved alignment. Off by default.')
     args = parser.parse_args()
     transcript_ids_filename = args.t_ids_file
+    target_tfs_filename = args.tf_ids_file
     species_group = args.species_group
     target_species = args.target_species
     coverage = args.coverage
@@ -124,7 +127,7 @@ def get_args():
     top_x_tfs_count = args.top_x_tfs
     output_dir = args.output_dir
     
-    return args, transcript_ids_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir
+    return args, transcript_ids_filename, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir
 
 
 ################################################################################
@@ -196,6 +199,33 @@ def parse_transcript_ids(transcript_ids_filename):
     return transcript_ids_list
 
 
+def parse_tf_ids(target_tfs_filename):
+    """
+    If user has provided a file with Ensembl transcript ids, parse these to a list.
+    """
+
+    with open(target_tfs_filename, 'r') as target_tfs_file:
+        target_tfs_list = target_tfs_file.read().splitlines()
+        target_tfs_list = [x.upper() for x in target_tfs_list if len(x)>0]
+
+    return target_tfs_list
+
+
+def compare_tfs_list_jaspar(target_tfs_list, TFBS_matrix_dict):
+    """
+    If user has provided a file containing Jaspar TF ids,
+    compare candidate entries to those in the loaded dictionary of Jaspar PWMs"
+    """
+
+    jaspar_dict_keys = TFBS_matrix_dict.keys()
+    erroneous = list(set(target_tfs_list) - set(jaspar_dict_keys))
+
+    target_tfs_list = list(set(jaspar_dict_keys).intersection(target_tfs_list))
+    if len(erroneous) > 0:
+        logging.warning(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "the following tf ids are not in the Jaspar database:", ", ".join(erroneous)]))
+
+    return target_tfs_list
+
 ################################################################################
 # PWM analysis #################################################################
 ################################################################################
@@ -263,7 +293,7 @@ def PWM_scorer(seq,pwm,pwm_dict,pwm_type):
     return seq_score
 
 
-def tfbs_finder(transcript_name, alignment, TFBS_matrix_dict, target_dir, pwm_score_threshold_dict, unaligned2aligned_index_dict, promoter_after_tss):
+def tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, target_dir, pwm_score_threshold_dict, unaligned2aligned_index_dict, promoter_after_tss):
     """
     1.Convert PFM to PWM for each TF in the Jaspar dictionary.
     2.Score all positions in the cleaned sequence
@@ -311,44 +341,46 @@ def tfbs_finder(transcript_name, alignment, TFBS_matrix_dict, target_dir, pwm_sc
 
 
             # iterate through each tf_name and its motif
-            for tf_name, tf_motif in TFBS_matrix_dict.iteritems():
-                motif_length = len(tf_motif[0])
-                
-                if motif_length > 0:
-                    # retrieve precomputed threshold and other information required for calculating the pvalue of the score
-                    # set score threshold to zero if threshold less than zero
-                    pwm_score_threshold_list = pwm_score_threshold_dict[tf_name][1]
-                    pwm_score_threshold = pwm_score_threshold_list[0]
-                    if pwm_score_threshold < 0:
-                        pwm_score_threshold = 0
-                    random_scores_len = pwm_score_threshold_dict[tf_name][0][0]
-                    cutoff_index = pwm_score_threshold_dict[tf_name][0][1]
+            for tf_name in target_tfs_list:
+                if tf_name in TFBS_matrix_dict:
+                    tf_motif = TFBS_matrix_dict[tf_name]
+                    motif_length = len(tf_motif[0])
                     
-                    # iterate through the forward and reverse strand sequences
-                    for strand, seq in seq_dict.iteritems():
-                        pwm = pwm_maker(strand, motif_length, tf_motif, bg_nuc_freq_dict, neg_bg_nuc_freq_dict)
+                    if motif_length > 0:
+                        # retrieve precomputed threshold and other information required for calculating the pvalue of the score
+                        # set score threshold to zero if threshold less than zero
+                        pwm_score_threshold_list = pwm_score_threshold_dict[tf_name][1]
+                        pwm_score_threshold = pwm_score_threshold_list[0]
+                        if pwm_score_threshold < 0:
+                            pwm_score_threshold = 0
+                        random_scores_len = pwm_score_threshold_dict[tf_name][0][0]
+                        cutoff_index = pwm_score_threshold_dict[tf_name][0][1]
                         
-                        seq_length = len(seq)
-                        # iterate through the nt sequence, extract a current frame based on the motif size and score
-                        for i in range(0, len(seq) - motif_length):
-                            current_frame = seq[i:i+motif_length]
-                            current_frame_score = PWM_scorer(current_frame, pwm, mononuc_pwm_dict, 'mono')
+                        # iterate through the forward and reverse strand sequences
+                        for strand, seq in seq_dict.iteritems():
+                            pwm = pwm_maker(strand, motif_length, tf_motif, bg_nuc_freq_dict, neg_bg_nuc_freq_dict)
+                            
+                            seq_length = len(seq)
+                            # iterate through the nt sequence, extract a current frame based on the motif size and score
+                            for i in range(0, len(seq) - motif_length):
+                                current_frame = seq[i:i+motif_length]
+                                current_frame_score = PWM_scorer(current_frame, pwm, mononuc_pwm_dict, 'mono')
 
-                            # keep results that are above the precomputed threshold
-                            if current_frame_score >= pwm_score_threshold:
-                                current_frame_score = round(current_frame_score, 2)
-                                current_frame_score_pvalue = determine_score_pvalue(current_frame_score, pwm_score_threshold_list, random_scores_len, cutoff_index)
-                                hit_loc_start, hit_loc_end, hit_loc_before_TSS_start, hit_loc_before_TSS_end = start_end_found_motif(i, strand, seq_length, promoter_after_tss, motif_length)
+                                # keep results that are above the precomputed threshold
+                                if current_frame_score >= pwm_score_threshold:
+                                    current_frame_score = round(current_frame_score, 2)
+                                    current_frame_score_pvalue = determine_score_pvalue(current_frame_score, pwm_score_threshold_list, random_scores_len, cutoff_index)
+                                    hit_loc_start, hit_loc_end, hit_loc_before_TSS_start, hit_loc_before_TSS_end = start_end_found_motif(i, strand, seq_length, promoter_after_tss, motif_length)
 
-                                # identify position in alignment from start of found motif in unaligned sequence
-                                aligned_position = unaligned2aligned_index_dict[species][hit_loc_start]
+                                    # identify position in alignment from start of found motif in unaligned sequence
+                                    aligned_position = unaligned2aligned_index_dict[species][hit_loc_start]
 
-                                # add to results dictionary by tf_name
-                                if tf_name in tfbss_found_dict:
-                                    tfbss_found_dict[tf_name].append([tf_name, species, current_frame, strand, hit_loc_start, hit_loc_end, hit_loc_before_TSS_start, hit_loc_before_TSS_end, current_frame_score, current_frame_score_pvalue, aligned_position])
+                                    # add to results dictionary by tf_name
+                                    if tf_name in tfbss_found_dict:
+                                        tfbss_found_dict[tf_name].append([tf_name, species, current_frame, strand, hit_loc_start, hit_loc_end, hit_loc_before_TSS_start, hit_loc_before_TSS_end, current_frame_score, current_frame_score_pvalue, aligned_position])
 
-                                else:
-                                    tfbss_found_dict[tf_name] = [[tf_name, species, current_frame, strand, hit_loc_start, hit_loc_end, hit_loc_before_TSS_start, hit_loc_before_TSS_end, current_frame_score, current_frame_score_pvalue, aligned_position]]
+                                    else:
+                                        tfbss_found_dict[tf_name] = [[tf_name, species, current_frame, strand, hit_loc_start, hit_loc_end, hit_loc_before_TSS_start, hit_loc_before_TSS_end, current_frame_score, current_frame_score_pvalue, aligned_position]]
 
 
         # sort results for each tf_name according to the position in alignment
@@ -502,7 +534,7 @@ def cluster_table_writer(cluster_dict, target_dir, name, locality_threshold):
 
     with open(output_table_name, 'wb') as output_table:
         writerUS=csv.writer(output_table) 
-        writerUS.writerow(['binding_prot', 'species', 'motif', 'strand', 'start', 'end', 'pre-TSS start', 'pre-TSS end', 'frame score', 'p-value', 'pos in align.', 'combined affinity score', 'support'])
+        writerUS.writerow(['binding_prot', 'species', 'motif', 'strand', 'start', 'end', 'TSS-relative start', 'TSS-relative end', 'frame score', 'p-value', 'pos in align.', 'combined affinity score', 'support'])
         spacer_row = ["#############", "", "", "", "", "", "", "", "", "", ""]
 
         # for all clusters which have pass thresholds, write full cluster to .csv
@@ -522,7 +554,7 @@ def target_species_hits_table_writer(sorted_clusters_target_species_hits_list, t
 
     with open(output_table_name, 'wb') as output_table:
         writerUS=csv.writer(output_table) 
-        writerUS.writerow(['binding_prot', 'species', 'motif', 'strand', 'start', 'end', 'pre-TSS start', 'pre-TSS end', 'frame score', 'p-value', 'pos in align.', 'combined affinity score', 'support'])
+        writerUS.writerow(['binding_prot', 'species', 'motif', 'strand', 'start', 'end', 'TSS-relative start', 'TSS-relative end', 'frame score', 'p-value', 'pos in align.', 'combined affinity score', 'support'])
 
         # for all clusters which have pass thresholds, write full cluster to .csv
         for hit in sorted_clusters_target_species_hits_list:
@@ -929,7 +961,7 @@ def CpG(aligned_filename):
 def plot_promoter(alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, conservation,cpg_list):
     """
     Plot the predicted TFBSs, onto a 5000 nt promoter graph, which possess support above the current strand threshold.
-    ['binding_prot', 'species', 'motif', 'strand', 'start', 'end', 'pre-TSS start', 'pre-TSS end', 'frame score', 'p-value', 'pos in align.', 'combined affinity score', 'support']
+    ['binding_prot', 'species', 'motif', 'strand', 'start', 'end', 'TSS-relative start', 'TSS-relative end', 'frame score', 'p-value', 'pos in align.', 'combined affinity score', 'support']
     """
 
     fig = plt.figure(figsize=(10, 6))
@@ -1052,7 +1084,12 @@ def plot_promoter(alignment, alignment_len, promoter_before_tss, promoter_after_
     ax1.set_yticks(range(-1 * ((tens_y)*10), ((tens_y)*10)+1, 10))
     title_str = transcript_name + " Predicted TFBSs"
     fig.suptitle(title_str, x=.05, rotation='vertical', fontsize=18)
-    xtick_jump = 10 ** (int(numpylog(promoter_before_tss + promoter_after_tss)) - 1)
+
+    # variable x-ticks
+    dist = promoter_before_tss + promoter_after_tss
+    rough_interval = dist/10
+    power = int(np.log10(rough_interval))
+    xtick_jump = (rough_interval/(10**power)) * 10**power
     ax3.set_xticks(range(-1 * promoter_before_tss, promoter_after_tss + 1, xtick_jump))
 
     # ax2 conservation
@@ -1082,6 +1119,10 @@ def plot_promoter(alignment, alignment_len, promoter_before_tss, promoter_after_
 # Execution ####################################################################
 ################################################################################
 
+
+
+
+
 def main():
     """
     All the things.
@@ -1089,7 +1130,7 @@ def main():
 
     print("Executing tfbs_footprinter version %s." % __version__)
     
-    args, transcript_ids_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir = get_args()
+    args, transcript_ids_filename, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir = get_args()
 
     # Create directory for results
     directory_creator(output_dir)
@@ -1109,62 +1150,71 @@ def main():
     logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), str(vars(args))]))
 
     transcript_ids_list = parse_transcript_ids(transcript_ids_filename)
-    for transcript_id in transcript_ids_list:
-        logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), transcript_id]))
-        decoded_json_description = ensemblrest('/archive/id/', '?content-type=application/json', 'json', transcript_id)
 
-        if 'error' in decoded_json_description:
-            logging.warning(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), decoded_json_description['error']]))
-            continue
-        
-        if 'error' not in decoded_json_description:
-            target_dir_name = "_".join([transcript_id, species_group])
-            target_dir = os.path.join(output_dir, target_dir_name)
-            directory_creator(target_dir)
-            transcript_dict_filename = os.path.join(target_dir, "transcript_dict.json")
-            transcript_dict, transcript_name, chromosome, tss, strand, promoter_start, promoter_end = transfabulator(transcript_id, transcript_dict_filename, promoter_before_tss, promoter_after_tss)
+    if target_tfs_filename != None:
+        target_tfs_list = parse_tf_ids(target_tfs_filename)
+        target_tfs_list = compare_tfs_list_jaspar(target_tfs_list, TFBS_matrix_dict)
+    else:
+        target_tfs_list = TFBS_matrix_dict.keys()
 
-            # filenames for alignment and ensembl regulatory data
-            ensembl_aligned_filename = os.path.join(target_dir, "alignment_uncleaned.fasta")
-            cleaned_aligned_filename = os.path.join(target_dir, "alignment_cleaned.fasta")
-            alignment = alignment_tools(ensembl_aligned_filename, cleaned_aligned_filename, species_group, target_species, chromosome, strand, promoter_start, promoter_end, coverage)
+    if len(target_tfs_list) > 0:
+    
+        for transcript_id in transcript_ids_list:
+            logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), transcript_id]))
+            decoded_json_description = ensemblrest('/archive/id/', '?content-type=application/json', 'json', transcript_id)
 
-            if len(alignment) > 0:
-                target_species_row = alignment[0]
-                alignment_len = len(target_species_row['seq'].replace('-',''))
+            if 'error' in decoded_json_description:
+                logging.warning(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), decoded_json_description['error']]))
+                continue
+            
+            if 'error' not in decoded_json_description:
+                target_dir_name = "_".join([transcript_id, species_group])
+                target_dir = os.path.join(output_dir, target_dir_name)
+                directory_creator(target_dir)
+                transcript_dict_filename = os.path.join(target_dir, "transcript_dict.json")
+                transcript_dict, transcript_name, chromosome, tss, strand, promoter_start, promoter_end = transfabulator(transcript_id, transcript_dict_filename, promoter_before_tss, promoter_after_tss)
 
-                # retrieve regulatory
-                regulatory_decoded_filename = os.path.join(target_dir, "regulatory_decoded.json")
-                regulatory_decoded = retrieve_regulatory(chromosome, strand, promoter_start, promoter_end, regulatory_decoded_filename, target_species)
-                regulatory_decoded = load_json(regulatory_decoded_filename)
-                converted_reg_dict = reg_position_translate(tss,regulatory_decoded,promoter_start,promoter_end,strand,promoter_before_tss,promoter_after_tss)
+                # filenames for alignment and ensembl regulatory data
+                ensembl_aligned_filename = os.path.join(target_dir, "alignment_uncleaned.fasta")
+                cleaned_aligned_filename = os.path.join(target_dir, "alignment_cleaned.fasta")
+                alignment = alignment_tools(ensembl_aligned_filename, cleaned_aligned_filename, species_group, target_species, chromosome, strand, promoter_start, promoter_end, coverage)
 
-                # conservation
-                conservation = alignment_conservation(cleaned_aligned_filename)
-                cpg_list = CpG(cleaned_aligned_filename)
+                if len(alignment) > 0:
+                    target_species_row = alignment[0]
+                    alignment_len = len(target_species_row['seq'].replace('-',''))
 
-                # create index of aligned to unaligned positions
-                unaligned2aligned_index_dict = unaligned2aligned_indexes(cleaned_aligned_filename)
+                    # retrieve regulatory
+                    regulatory_decoded_filename = os.path.join(target_dir, "regulatory_decoded.json")
+                    regulatory_decoded = retrieve_regulatory(chromosome, strand, promoter_start, promoter_end, regulatory_decoded_filename, target_species)
+                    regulatory_decoded = load_json(regulatory_decoded_filename)
+                    converted_reg_dict = reg_position_translate(tss,regulatory_decoded,promoter_start,promoter_end,strand,promoter_before_tss,promoter_after_tss)
 
-                # score alignment for tfbss
-                tfbss_found_dict = tfbs_finder(transcript_name, alignment, TFBS_matrix_dict, target_dir, pwm_score_threshold_dict, unaligned2aligned_index_dict, promoter_after_tss)
+                    # conservation
+                    conservation = alignment_conservation(cleaned_aligned_filename)
+                    cpg_list = CpG(cleaned_aligned_filename)
 
-                # sort through scores, identify hits in target_species supported in other species
-                cluster_dict = find_clusters(target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold)
+                    # create index of aligned to unaligned positions
+                    unaligned2aligned_index_dict = unaligned2aligned_indexes(cleaned_aligned_filename)
 
-                # write cluster entries to .csv
-                cluster_table_writer(cluster_dict, target_dir, ".clusters.", locality_threshold)
+                    # score alignment for tfbss
+                    tfbss_found_dict = tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, target_dir, pwm_score_threshold_dict, unaligned2aligned_index_dict, promoter_after_tss)
 
-                # sort the target_species hits supported by other species
-                sorted_clusters_target_species_hits_dict, sorted_clusters_target_species_hits_list = sort_target_species_hits(cluster_dict)
-                target_species_hits_table_writer(sorted_clusters_target_species_hits_list, target_dir, ".sortedclusters.", locality_threshold)
-                
-                # extract the top x target_species hits supported by other species
-                top_x_greatest_hits_dict = top_x_greatest_hits(sorted_clusters_target_species_hits_list, top_x_tfs_count)
+                    # sort through scores, identify hits in target_species supported in other species
+                    cluster_dict = find_clusters(target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold)
 
-                # plot the top x target_species hits
-                if len(top_x_greatest_hits_dict) > 0:
-                    plot_promoter(alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, conservation, cpg_list)
+                    # write cluster entries to .csv
+                    cluster_table_writer(cluster_dict, target_dir, ".clusters.", locality_threshold)
+
+                    # sort the target_species hits supported by other species
+                    sorted_clusters_target_species_hits_dict, sorted_clusters_target_species_hits_list = sort_target_species_hits(cluster_dict)
+                    target_species_hits_table_writer(sorted_clusters_target_species_hits_list, target_dir, ".sortedclusters.", locality_threshold)
+                    
+                    # extract the top x target_species hits supported by other species
+                    top_x_greatest_hits_dict = top_x_greatest_hits(sorted_clusters_target_species_hits_list, top_x_tfs_count)
+
+                    # plot the top x target_species hits
+                    if len(top_x_greatest_hits_dict) > 0:
+                        plot_promoter(alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, conservation, cpg_list)
 
 
     total_time_end = time.time()
