@@ -869,7 +869,8 @@ def reg_position_translate(tss,regulatory_decoded,promoter_start,promoter_end,st
             converted_reg_start = (tss - reg_start) * -1
             converted_reg_end = (tss - reg_end) * -1
             if reg_start <= promoter_start:
-                converted_reg_start = (-1 * promoter_before_tss + promoter_after_tss) + 0.001
+##                converted_reg_start = (-1 * promoter_before_tss + promoter_after_tss) + 0.001
+                converted_reg_start = (-1 * promoter_before_tss)
             if reg_end >= promoter_end:
                 converted_reg_end = promoter_after_tss - 0.001
 
