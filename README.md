@@ -136,46 +136,45 @@ Iterate through each user provided Ensembl transcript id:
 ## 5 Species
 The promoter region of any Ensembl transcript of any species within any column can be compared against the other members of the same column in order to identify a conserved binding site of the 519 transcription factors described in the Jaspar database.  The Enredo-Pecan-Ortheus pipeline was used to create whole genome alignments between the species in each column.  'EPO_LOW' indicates this column also contains genomes for which the sequencing of the current version is still considered low-coverage.  The TFBS footprinting pipeline partially accounts for this by removing sequences from alignments which appear to be missing segments.  Due to the significantly greater number of species, we recommend using the low coverage versions except for primate comparisons which do not have a low coverage version.
 
-EPO_LOW mammals | EPO_LOW fish | EPO_LOW sauropsids | EPO mammals | EPO primates | EPO fish | EPO sauropsids
-|---|---|---|---|---|---|---|
-ailuropoda_melanoleuca | astyanax_mexicanus | anas_platyrhynchos | bos_taurus | callithrix_jacchus | danio_rerio | anolis_carolinensis
-bos_taurus | danio_rerio | anolis_carolinensis | callithrix_jacchus | chlorocebus_sabaeus | gasterosteus_aculeatus | gallus_gallus
-callithrix_jacchus | gadus_morhua | ficedula_albicollis | canis_familiaris | gorilla_gorilla | lepisosteus_oculatus | meleagris_gallopavo
-canis_familiaris | gasterosteus_aculeatus | gallus_gallus | chlorocebus_sabaeus | homo_sapiens | oryzias_latipes | taeniopygia_guttata
-cavia_porcellus | lepisosteus_oculatus | meleagris_gallopavo | equus_caballus | macaca_mulatta | tetraodon_nigroviridis | 
-chlorocebus_sabaeus | oreochromis_niloticus | pelodiscus_sinensis | felis_catus | pan_troglodytes |  | 
-choloepus_hoffmanni | oryzias_latipes | taeniopygia_guttata | gorilla_gorilla | papio_anubis |  | 
-dasypus_novemcinctus | poecilia_formosa |  | homo_sapiens | pongo_abelii |  | 
-dipodomys_ordii | takifugu_rubripes |  | macaca_mulatta |  |  | 
-echinops_telfairi | tetraodon_nigroviridis |  | mus_musculus |  |  | 
-equus_caballus | xiphophorus_maculatus |  | oryctolagus_cuniculus |  |  | 
-erinaceus_europaeus |  |  | ovis_aries |  |  | 
-felis_catus |  |  | pan_troglodytes |  |  | 
-gorilla_gorilla |  |  | papio_anubis |  |  | 
-homo_sapiens |  |  | pongo_abelii |  |  | 
-ictidomys_tridecemlineatus |  |  | rattus_norvegicus |  |  | 
-loxodonta_africana |  |  | sus_scrofa |  |  | 
-macaca_mulatta |  |  |  |  |  | 
-microcebus_murinus |  |  |  |  |  | 
-mus_musculus |  |  |  |  |  | 
-mustela_putorius_furo |  |  |  |  |  | 
-myotis_lucifugus |  |  |  |  |  | 
-nomascus_leucogenys |  |  |  |  |  | 
-ochotona_princeps |  |  |  |  |  | 
-oryctolagus_cuniculus |  |  |  |  |  | 
-otolemur_garnettii |  |  |  |  |  | 
-ovis_aries |  |  |  |  |  | 
-pan_troglodytes |  |  |  |  |  | 
-papio_anubis |  |  |  |  |  | 
-pongo_abelii |  |  |  |  |  | 
-procavia_capensis |  |  |  |  |  | 
-pteropus_vampyrus |  |  |  |  |  | 
-rattus_norvegicus |  |  |  |  |  | 
-sorex_araneus |  |  |  |  |  | 
-sus_scrofa |  |  |  |  |  | 
-tarsius_syrichta |  |  |  |  |  | 
-tupaia_belangeri |  |  |  |  |  | 
-tursiops_truncatus |  |  |  |  |  | 
-vicugna_pacos |  |  |  |  |  | 
-
+|EPO_LOW mammals           |EPO_LOW fish          |EPO_LOW sauropsids |EPO mammals          |EPO primates       |EPO fish              |EPO sauropsids     |
+|--------------------------|----------------------|-------------------|---------------------|-------------------|----------------------|-------------------|
+|ailuropoda_melanoleuca    |astyanax_mexicanus    |anas_platyrhynchos |bos_taurus           |callithrix_jacchus |danio_rerio           |anolis_carolinensis|
+|bos_taurus                |danio_rerio           |anolis_carolinensis|callithrix_jacchus   |chlorocebus_sabaeus|gasterosteus_aculeatus|gallus_gallus      |
+|callithrix_jacchus        |gadus_morhua          |ficedula_albicollis|canis_familiaris     |gorilla_gorilla    |lepisosteus_oculatus  |meleagris_gallopavo|
+|canis_familiaris          |gasterosteus_aculeatus|gallus_gallus      |chlorocebus_sabaeus  |homo_sapiens       |oryzias_latipes       |taeniopygia_guttata|
+|cavia_porcellus           |lepisosteus_oculatus  |meleagris_gallopavo|equus_caballus       |macaca_mulatta     |tetraodon_nigroviridis|                   |
+|chlorocebus_sabaeus       |oreochromis_niloticus |pelodiscus_sinensis|felis_catus          |pan_troglodytes    |                      |                   |
+|choloepus_hoffmanni       |oryzias_latipes       |taeniopygia_guttata|gorilla_gorilla      |papio_anubis       |                      |                   |
+|dasypus_novemcinctus      |poecilia_formosa      |                   |homo_sapiens         |pongo_abelii       |                      |                   |
+|dipodomys_ordii           |takifugu_rubripes     |                   |macaca_mulatta       |                   |                      |                   |
+|echinops_telfairi         |tetraodon_nigroviridis|                   |mus_musculus         |                   |                      |                   |
+|equus_caballus            |xiphophorus_maculatus |                   |oryctolagus_cuniculus|                   |                      |                   |
+|erinaceus_europaeus       |                      |                   |ovis_aries           |                   |                      |                   |
+|felis_catus               |                      |                   |pan_troglodytes      |                   |                      |                   |
+|gorilla_gorilla           |                      |                   |papio_anubis         |                   |                      |                   |
+|homo_sapiens              |                      |                   |pongo_abelii         |                   |                      |                   |
+|ictidomys_tridecemlineatus|                      |                   |rattus_norvegicus    |                   |                      |                   |
+|loxodonta_africana        |                      |                   |sus_scrofa           |                   |                      |                   |
+|macaca_mulatta            |                      |                   |                     |                   |                      |                   |
+|microcebus_murinus        |                      |                   |                     |                   |                      |                   |
+|mus_musculus              |                      |                   |                     |                   |                      |                   |
+|mustela_putorius_furo     |                      |                   |                     |                   |                      |                   |
+|myotis_lucifugus          |                      |                   |                     |                   |                      |                   |
+|nomascus_leucogenys       |                      |                   |                     |                   |                      |                   |
+|ochotona_princeps         |                      |                   |                     |                   |                      |                   |
+|oryctolagus_cuniculus     |                      |                   |                     |                   |                      |                   |
+|otolemur_garnettii        |                      |                   |                     |                   |                      |                   |
+|ovis_aries                |                      |                   |                     |                   |                      |                   |
+|pan_troglodytes           |                      |                   |                     |                   |                      |                   |
+|papio_anubis              |                      |                   |                     |                   |                      |                   |
+|pongo_abelii              |                      |                   |                     |                   |                      |                   |
+|procavia_capensis         |                      |                   |                     |                   |                      |                   |
+|pteropus_vampyrus         |                      |                   |                     |                   |                      |                   |
+|rattus_norvegicus         |                      |                   |                     |                   |                      |                   |
+|sorex_araneus             |                      |                   |                     |                   |                      |                   |
+|sus_scrofa                |                      |                   |                     |                   |                      |                   |
+|tarsius_syrichta          |                      |                   |                     |                   |                      |                   |
+|tupaia_belangeri          |                      |                   |                     |                   |                      |                   |
+|tursiops_truncatus        |                      |                   |                     |                   |                      |                   |
+|vicugna_pacos             |                      |                   |                     |                   |                      |                   |
 
