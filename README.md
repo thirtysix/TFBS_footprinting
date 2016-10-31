@@ -26,27 +26,28 @@ ee the Ensembl species groups to plan your analysis: https://rest.ensembl.org/in
 
 ### 2.4 User Input Examples - Command Line
 ```
-$ TFBS_footprinter PATH_TO/sample_ids.txt
-$ TFBS_footprinter PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
+$ tfbs_footprinter PATH_TO/sample_ids.txt
+$ tfbs_footprinter PATH_TO/sample_ids.txt -tfs PATH_TO/tf_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
 ```
 
 ### 2.5 Arguments
 ```
-usage: TFBS_analyzer2.py [-h] [--tf_ids_file] [--target_species]
-                         [--species_group] [--coverage]
-                         [--promoter_before_tss] [--promoter_after_tss]
-                         [--locality_threshold] [--conservation_min]
-                         [--top_x_tfs] [--output_dir]
+Executing tfbs_footprinter version 1.0.0b23.
+usage: tfbs_footprinter [-h] [--tf_ids_file] [--target_species]
+                        [--species_group] [--coverage] [--promoter_before_tss]
+                        [--promoter_after_tss] [--locality_threshold]
+                        [--conservation_min] [--top_x_tfs] [--output_dir]
 
-TFBS Footprinting - Identification of conserved vertebrate transcription factor binding sites (TFBSs)')
+TFBS Footprinting - Identification of conserved vertebrate transcription factor binding sites (TFBSs).
+See https://github.com/thirtysix/TFBS_footprinting for additional usage instructions.
 
 ------------------------------------------------------------------------------------------------------
 Example Usage:
     simplest:
-    TFBS_analyzer2.py PATH_TO/sample_ids.txt
+    tfbs_footprinter PATH_TO/sample_ids.txt
 
     all arguments:
-    TFBS_analyzer2.py PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
+    tfbs_footprinter PATH_TO/sample_ids.txt -tfs PATH_TO/tf_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
 ------------------------------------------------------------------------------------------------------
 
 positional arguments:
@@ -104,7 +105,6 @@ optional arguments:
   --output_dir , -o     [default: /home/harlan/Dropbox/github/TFBS_footprintin
                         g/tfbs_results ] - Full path of directory where result
                         directories will be output.
-
 ```
 
 
