@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Python vers. 2.7.0 ###########################################################
-__version__ = "1.0.0b22"
+__version__ = "1.0.0b23"
 
 
 # Libraries ####################################################################
@@ -54,18 +54,19 @@ def get_args():
 
     # Instantiate the parser
     parser = argparse.ArgumentParser(
-        prog="TFBS_analyzer2.py",
+        prog="tfbs_footprinter",
         formatter_class = argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent("""\
-            TFBS Footprinting - Identification of conserved vertebrate transcription factor binding sites (TFBSs)')
+            TFBS Footprinting - Identification of conserved vertebrate transcription factor binding sites (TFBSs).
+            See https://github.com/thirtysix/TFBS_footprinting for additional usage instructions.
 
             ------------------------------------------------------------------------------------------------------
             Example Usage:
                 simplest:
-                TFBS_analyzer2.py PATH_TO/sample_ids.txt
+                tfbs_footprinter PATH_TO/sample_ids.txt
 
                 all arguments:
-                TFBS_analyzer2.py PATH_TO/sample_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
+                tfbs_footprinter PATH_TO/sample_ids.txt -tfs PATH_TO/tf_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
             ------------------------------------------------------------------------------------------------------
             """))
 
@@ -113,7 +114,6 @@ def get_args():
                         help=" ".join(['[default:', os.path.join(curdir, "tfbs_results"), '] - Full path of directory where result directories will be output.']))
     # Functionality to add later
     ##parser.add_argument('--pval', '-p', type=float, default=0.001, help='P-value (float) for determine score cutoff (range: 0.001 to 0.0000001) [default: 0.001]')
-
     ##parser.add_argument('--noclean', '-nc', action = 'store_true', help='Optional: Don't clean retrieved alignment. Off by default.')
     args = parser.parse_args()
     transcript_ids_filename = args.t_ids_file
@@ -146,13 +146,18 @@ def dump_json(filename, json_data):
 
 
 def directory_creator(directory_name):
-    """Create directory if it does not already exist"""
+    """
+    Create directory if it does not already exist.
+    """
+
     if not os.path.isdir(directory_name):
         os.mkdir(directory_name)
 
 
 def ensemblrest(query_type, options, output_type, ensembl_id=None):
-    """Retrieve REST data from Ensembl using provided ID, query type, and options"""
+    """
+    Retrieve REST data from Ensembl using provided ID, query type, and options.
+    """
 
     http = httplib2.Http()
     server = "http://rest.ensembl.org"
@@ -175,7 +180,10 @@ def ensemblrest(query_type, options, output_type, ensembl_id=None):
 
 
 def ensemblrest_rate(resp):
-    """read ensembl REST headers and determine if rate-limit has been exceeded, sleep appropriately if necessary"""
+    """
+    Read ensembl REST headers and determine if rate-limit has been exceeded, sleep appropriately if necessary.
+    """
+
     if int(resp['x-ratelimit-remaining']) == 0:       
         if 'Retry-After' in resp:
             sleep_time = int(resp['Retry-After'])
@@ -215,7 +223,7 @@ def parse_tf_ids(target_tfs_filename):
 def compare_tfs_list_jaspar(target_tfs_list, TFBS_matrix_dict):
     """
     If user has provided a file containing Jaspar TF ids,
-    compare candidate entries to those in the loaded dictionary of Jaspar PWMs"
+    compare candidate entries to those in the loaded dictionary of Jaspar PWMs.
     """
 
     jaspar_dict_keys = TFBS_matrix_dict.keys()
@@ -232,7 +240,7 @@ def compare_tfs_list_jaspar(target_tfs_list, TFBS_matrix_dict):
 ################################################################################
 def pwm_maker(strand, motif_length, tf_motif, bg_nuc_freq_dict, neg_bg_nuc_freq_dict):
     """
-    Make a PWM.
+    Make a PWM from a nucleotide frequency table.
     """
     pwm = [[],[],[],[]]
     nuc_list = 'ACGT'
@@ -260,9 +268,7 @@ def pwm_maker(strand, motif_length, tf_motif, bg_nuc_freq_dict, neg_bg_nuc_freq_
 
             # probability of nuc
             nuc_probability = (nuc_count + pseudo_count/4)/(N + pseudo_count)
-
             nuc_weight = math.log((nuc_probability/nuc_bg), 2)
-
             pwm[j].append(nuc_weight)
 ##            ppm[j].append(nuc_probability)
         
@@ -271,8 +277,10 @@ def pwm_maker(strand, motif_length, tf_motif, bg_nuc_freq_dict, neg_bg_nuc_freq_
     return pwm
 
 
-def PWM_scorer(seq,pwm,pwm_dict,pwm_type):
-    """generate score for current seq given a pwm"""
+def PWM_scorer(seq, pwm, pwm_dict, pwm_type):
+    """
+    Generate score for current seq given a pwm.
+    """
 
     # set relevant variables based on whether the pwm is mono or dinucleotide
     if pwm_type == "mono":
@@ -310,7 +318,6 @@ def tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, t
         logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "tfbss_found_dict already exists: loading"]))
         tfbss_found_dict = load_json(tfbss_found_dict_outfilename)
                                                     
-    
     # If results don't already exist, time to party
     else:
         tfbss_found_dict = {}        
@@ -438,7 +445,9 @@ def start_end_found_motif(i, strand, seq_length, promoter_after_tss, motif_lengt
 
 
 def unaligned2aligned_indexes(cleaned_aligned_filename):
-    """Create a dictionary for mapping aligned positions to unaligned positions"""
+    """
+    Create a dictionary for mapping aligned positions to unaligned positions.
+    """
 
     with open(cleaned_aligned_filename, 'rU') as cleaned_aligned_file:
         aligned_entries_dict = SeqIO.to_dict(SeqIO.parse(cleaned_aligned_file, 'fasta'))
@@ -458,12 +467,10 @@ def unaligned2aligned_indexes(cleaned_aligned_filename):
 
 def find_clusters(target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold):
     """
-    for each target species hit, find all hits in other species within the locality_threshold.
-    identify the highest score for each species within the locality threshold
-    create combined affinity score from the target species hit and those best scores from each species
-    if two target species hits are within the locality threshold from one another, choose the hit which has the highest combined affinity score
-
-    2. possibility
+    For each target species hit, find all hits in other species within the locality_threshold.
+    Identify the highest score for each species within the locality threshold.
+    Create combined affinity score from the target species hit and those best scores from each species.
+    If two target species hits are within the locality threshold from one another, choose the hit which has the highest combined affinity score.
     """
     
     cluster_dict = {}
@@ -527,9 +534,10 @@ def find_clusters(target_species, tfbss_found_dict, cleaned_aligned_filename, st
 
 
 def cluster_table_writer(cluster_dict, target_dir, name, locality_threshold):
-    """4. find best hits and output that list.
-    take promoter results and output a .csv file containing all relevant information.
-    only print to file those promoter hits which have support at that position."""
+    """
+    Write results to table for target species hits and,
+    non-target species hits which support them.
+    """
 
     output_table_name = os.path.join(target_dir, "TFBSs_found" + name  + "csv")
 
@@ -547,9 +555,9 @@ def cluster_table_writer(cluster_dict, target_dir, name, locality_threshold):
                               
 
 def target_species_hits_table_writer(sorted_clusters_target_species_hits_list, target_dir, name, locality_threshold):
-    """4. find best hits and output that list.
-    take promoter results and output a .csv file containing all relevant information.
-    only print to file those promoter hits which have support at that position."""
+    """
+    Write results to table for only target species.
+    """
 
     output_table_name = os.path.join(target_dir, "TFBSs_found" + name  + "csv")
 
@@ -593,15 +601,13 @@ def top_x_greatest_hits(sorted_clusters_target_species_hits_list, top_x_tfs_coun
     Allows plotting more than one instance of a top tf, without increasing the total tf used count.
     e.g. 3 instances of KLF4 will count as only one tf used towards the top_x_tfs_count threshold.
     """
+    
     # to keep track of how many tfs have been added
     top_x_tfs = []
     # to store the x greatest tfs and their locations
     top_x_greatest_hits_dict = {}
 
-
     # add all hits to single pool so top hits can be identified
-    
-
     for sorted_clusters_target_species_hit in sorted_clusters_target_species_hits_list:
         # ref-point
         tf_name = sorted_clusters_target_species_hit[0]
@@ -625,8 +631,10 @@ def top_x_greatest_hits(sorted_clusters_target_species_hits_list, top_x_tfs_coun
 # Alignment Manipulation #######################################################
 ################################################################################
 def retrieve_genome_aligned(species_group, target_species, chromosome, strand, promoter_start, promoter_end, coverage):
-    """Takes as input target_species CCDS start position and size of promoter to be extracted.  Retrieves genome aligned,
-    corresponding regions in all orthologs."""
+    """
+    Takes as input target_species CCDS start position and size of promoter to be extracted.  Retrieves genome aligned,
+    corresponding regions in all orthologs.
+    """
 
     # Retrieve alignment if alignment FASTA does not already exist  
     query_type = "/alignment/block/region/"
@@ -651,7 +659,10 @@ def retrieve_genome_aligned(species_group, target_species, chromosome, strand, p
 
 
 def fasta_writer(alignment, outfile):
-    """write ensembl JSON alignment to fasta file"""
+    """
+    Write ensembl JSON alignment to fasta file.
+    """
+    
     if not os.path.isfile(outfile):
         with open(outfile, "w") as aligned_file:
             for entry in alignment:
@@ -660,7 +671,10 @@ def fasta_writer(alignment, outfile):
 
 
 def remove_non_ACGT(alignment):
-    """remove non alignment characters and ambiguous nucleotides.  should consider changing to replacing any non ACGT char to '-' """
+    """
+    Remove non alignment characters and ambiguous nucleotides.  should consider changing to replacing any non ACGT char to '-'.
+    """
+    
     non_alignment_chars = " .N"
     for entry in alignment:
         for non_alignment_char in non_alignment_chars:
@@ -670,8 +684,11 @@ def remove_non_ACGT(alignment):
 
 
 def remove_gap_only(alignment):
-    """find columns in the alignment where the entire column is '-',
-        replace the '-' with 'P', then remove the '*' """
+    """
+    Find columns in the alignment where the entire column is '-',
+        replace the '-' with 'P', then remove the '*'.
+    """
+    
     for entry in alignment:
         entry['seq'] = list(entry['seq'])
 
@@ -712,7 +729,9 @@ def remove_duplicate_species(alignment):
 
 
 def selective_alignment(alignment):
-    """Remove sequences from the alignment if they have less then 75% of the nucleotides of the target_species sequence."""
+    """
+    Remove sequences from the alignment if they have less then 75% of the nucleotides of the target_species sequence.
+    """
 
     target_species_entry = alignment[0]
     target_species_seq_2nd_half = target_species_entry['seq'][len(target_species_entry['seq'])/2:]
@@ -731,7 +750,10 @@ def selective_alignment(alignment):
 
 
 def load_genome_aligned(aligned_filename):    
-    """load previously retrieved alignment fasta file into dictionary"""
+    """
+    Load previously retrieved alignment fasta file into dictionary.
+    """
+    
     with open(aligned_filename, 'r') as alignment_handle:
         alignment_list = list(SeqIO.parse(alignment_handle, 'fasta'))
     alignment = [{'seq': str(entry.seq), 'species':entry.id} for entry in alignment_list if '[' not in entry.id]
@@ -831,7 +853,9 @@ def transfabulator(transcript, transcript_dict_filename, promoter_before_tss, pr
 # Regulatory & Conservation Features ###########################################
 ################################################################################
 def retrieve_regulatory(chromosome, strand, promoter_start, promoter_end, regulatory_decoded_filename, target_species):
-    """Retrieve ensembl JSON data for regulatory features within the coordinates provided."""
+    """
+    Retrieve ensembl JSON data for regulatory features within the coordinates provided.
+    """
 
     # determine if the regulatory data has already been retrieved, if so load, if not retrieve.
     if os.path.isfile(regulatory_decoded_filename):
@@ -890,7 +914,9 @@ def reg_position_translate(tss,regulatory_decoded,promoter_start,promoter_end,st
 
 
 def alignment_conservation(aligned_filename):
-    """Identify basic conservation of DNA sequence in the alignment."""
+    """
+    Identify basic conservation of DNA sequence in the alignment.
+    """
 
     alignment = AlignIO.read(aligned_filename, "fasta")
     target_species_row = alignment[0]
@@ -913,7 +939,9 @@ def alignment_conservation(aligned_filename):
 
 
 def CpG(aligned_filename):
-    """Score the CpG content of the target_species sequence over a 200 nt window."""
+    """
+    Score the CpG content of the target_species sequence over a 200 nt window.
+    """
 
     alignment = AlignIO.read(aligned_filename, "fasta")
     target_species_row = alignment[0]
@@ -1120,10 +1148,6 @@ def plot_promoter(alignment, alignment_len, promoter_before_tss, promoter_after_
 ################################################################################
 # Execution ####################################################################
 ################################################################################
-
-
-
-
 
 def main():
     """
