@@ -3,13 +3,13 @@
 Pipeline: Identification of cis-regulatory elements by matrix scoring and conservation across groups of species (mammals, primates, sauropsids, fish) catalogued in the Ensembl database.
 
 ## 1 Background
-The TFBS footprinting method computationally predicts transcription factor binding sites (TFBSs) in a target species (e.g. homo sapiens), and identifies if they are conserved in a group of related species (e.g. mammals or primates) using alignments extracted from, and established within, the Ensembl database.  Our analyses have shown this method is superior in prediction of functional TFBSs compared to methods (PWMs and DeepBind) analyzing single species alone.  At the same time, TFBS footprinting is an extension of these methods.  This implementation uses the Jaspar 2016 vertebrate binding site data of 519 TFBSs.  This tool allows the user to analyze the user-defined promoter regions near the transcription start site of many vertebrate transcripts defined in the Ensembl database.
+The TFBS footprinting method computationally predicts transcription factor binding sites (TFBSs) in a target species (e.g. homo sapiens), and identifies if they are conserved in a group of related species (e.g. mammals or primates) using alignments extracted from, and established within, the Ensembl database.  Our analyses have shown this method is superior in prediction of **functional TFBSs** compared to methods (PWMs and DeepBind) analyzing single species alone.  At the same time, TFBS footprinting is an extension of these methods.  This implementation uses the Jaspar 2016 vertebrate binding site data of 519 TFBSs.  This tool allows the user to analyze the user-defined promoter regions near the transcription start site of many vertebrate transcripts defined in the Ensembl database.
 
 ## 2 Usage 
 Predict TFBSs in the promoter of from 1-80,000 human protein coding transcripts, and identify if they are conserved in mammals or primates.
-Model organisms such as mouse and zebrafish.
-39 Mammals
-ee the Ensembl species groups to plan your analysis: https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json
+Similarly, choose any of 58 different vertebrate species and analyze any transcript to identify conserved TFBSs in their species groups (e.g. chicken ('gallus_gallus') and sauropsids).
+Model organisms such as mouse and zebrafish are also available.
+See the Ensembl species groups to plan your analysis, either at the bottom of this page or at this link: https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json
 
 ### 2.1 Installation
 - `pip install TFBS_footprinting`
@@ -20,8 +20,11 @@ ee the Ensembl species groups to plan your analysis: https://rest.ensembl.org/in
 - Installed by *pip* automatically: Http2, Numpy, Biopython, Matplotlib
 
 
-### 2.3 User Input Examples - File of Ensembl Transcript IDs
+### 2.3a User Input Examples - File of Ensembl Transcript IDs [Required]
 ![sample_ids](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_ids.txt.png)
+
+### 2.3b User Input Examples - File of Jaspar TF IDs [Optional]
+![tf_ids](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_tf_ids.txt.png)
 
 
 ### 2.4 User Input Examples - Command Line
