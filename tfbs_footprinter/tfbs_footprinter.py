@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Python vers. 2.7.0 ###########################################################
-__version__ = "1.0.0b23"
+__version__ = "1.0.0b25"
 
 
 # Libraries ####################################################################
@@ -66,7 +66,7 @@ def get_args():
                 tfbs_footprinter PATH_TO/sample_ids.txt
 
                 all arguments:
-                tfbs_footprinter PATH_TO/sample_ids.txt -tfs PATH_TO/tf_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
+                tfbs_footprinter PATH_TO/sample_ids.txt -tfs PATH_TO/tf_ids.txt -cgs PATH_TO/cages.json -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
             ------------------------------------------------------------------------------------------------------
             """))
 
@@ -75,6 +75,8 @@ def get_args():
                         help='Required: Location of a file containing Ensembl target_species transcript ids (see sample file sample_ids.txt at https://github.com/thirtysix/TFBS_footprinting)")')
     parser.add_argument('--tf_ids_file', '-tfs', metavar='', type=str, default = None, help='Optional: Location of a file containing a limited list of Jaspar TFs to use in scoring alignment \
                                                                                                 (see sample file tf_ids.txt at https://github.com/thirtysix/TFBS_footprinting) [default: all Jaspar TFs]')
+##    parser.add_argument('--cage_ids_file', '-cgs', metavar='', type=str, default = None, help='Optional: Location of a file containing a list of human FANTOM CAGE peaks in proximity to Ensembl defined human TSSs (e.g. "cage.promoters.grch38.json").\
+##                                                                                                If present, the CAGEs will be mapped into the final figure of a human promoter.  Will not work with non-human species (Can be downloaded from: https://github.com/thirtysix/TFBS_footprinting/raw/master/cage.promoters.grch38.json ) [default: None]')
 
     parser.add_argument('--target_species', '-s', metavar='', choices = ['ailuropoda_melanoleuca', 'anas_platyrhynchos', 'anolis_carolinensis', 'astyanax_mexicanus',
                                                                          'bos_taurus', 'callithrix_jacchus', 'canis_familiaris', 'cavia_porcellus', 'chlorocebus_sabaeus',
@@ -118,6 +120,7 @@ def get_args():
     args = parser.parse_args()
     transcript_ids_filename = args.t_ids_file
     target_tfs_filename = args.tf_ids_file
+##    cages_filename = args.cage_ids_file
     species_group = args.species_group
     target_species = args.target_species
     coverage = args.coverage
@@ -128,6 +131,7 @@ def get_args():
     top_x_tfs_count = args.top_x_tfs
     output_dir = args.output_dir
     
+##    return args, transcript_ids_filename, target_tfs_filename, cages_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir
     return args, transcript_ids_filename, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir
 
 
@@ -135,8 +139,12 @@ def get_args():
 # House-keeping functions ######################################################
 ################################################################################
 def load_json(filename):
-    with open(filename) as open_infile:
-        json_data = json.load(open_infile)
+    if os.path.exists(filename):
+        with open(filename) as open_infile:
+            json_data = json.load(open_infile)
+    else:
+        json_data = None
+        
     return json_data
 
 
@@ -219,6 +227,15 @@ def parse_tf_ids(target_tfs_filename):
 
     return target_tfs_list
 
+##def parse_cages(cages_filename):
+##    """
+##    If user has provided a file with FANTOM CAGE locations, parse these to a dict.
+##    """
+##
+##    cage_dict = load_json(cages_filename)
+##
+##    return cage_dict
+        
 
 def compare_tfs_list_jaspar(target_tfs_list, TFBS_matrix_dict):
     """
@@ -867,6 +884,18 @@ def retrieve_regulatory(chromosome, strand, promoter_start, promoter_end, regula
         pre_options = target_species + "/" + chromosome + ":" + str(promoter_start) + "-" + str(promoter_end) + ":" + str(strand)
         options = pre_options + "?feature=regulatory;content-type=application/json"
         regulatory_decoded = ensemblrest(query_type, options, 'json', "")
+
+        # rename the Ensembl regulatory elements so that they don't overtake the space available for names.
+        for reg in regulatory_decoded:
+            if "description" in reg:
+                if reg["description"] == "Transcription factor binding site":
+                    reg["description"] = "Pred. TFBS"
+                if reg["description"] == "Open chromatin region":
+                    reg["description"] = "Open chromatin"
+                if reg["description"] == "Predicted promoter":
+                    reg["description"] = "Pred. promoter"
+
+
         dump_json(regulatory_decoded_filename, regulatory_decoded)
     
     return regulatory_decoded
@@ -988,16 +1017,66 @@ def CpG(aligned_filename):
     return cpg_list
 
 
-def plot_promoter(alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, conservation,cpg_list):
+def cage_position_translate(transcript_id,tss,cage_dict,promoter_start,promoter_end,strand,promoter_before_tss,promoter_after_tss):
+    """
+    Convert the CAGE data genome positions to those which can be mapped into the final figure.
+    """
+    
+    if transcript_id in cage_dict:
+        cages = cage_dict[transcript_id]
+        converted_cages = []
+
+        for cage in cages:
+            cage_strand = cage[2]
+            cage_start = cage[3]
+            cage_end = cage[4]
+            cage_desc = cage[0]
+
+            if cage_strand == "+":
+                #[promoter_start][cage_start][cage_end][promoter_end][chr_start][TSS>GENE--->][chr_end]
+                converted_cage_start = (tss - cage_start) * -1
+                converted_cage_end = (tss - cage_end) * -1
+
+            if cage_strand == "-":
+                #[chr_start][<---GENE<TSS][chr_end][promoter_start][cage_start][cage_end][promoter_end]
+                converted_cage_start = (tss - cage_start)
+                converted_cage_end = (tss - cage_end)
+
+            converted_cage = [converted_cage_start, converted_cage_end, cage_desc]
+            converted_cages.append(converted_cage)
+
+        converted_cages = sorted(converted_cages, key=itemgetter(2))
+
+    else:
+        converted_cages = []
+
+    return converted_cages
+
+
+def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, conservation, cpg_list, converted_cages):
     """
     Plot the predicted TFBSs, onto a 5000 nt promoter graph, which possess support above the current strand threshold.
     ['binding_prot', 'species', 'motif', 'strand', 'start', 'end', 'TSS-relative start', 'TSS-relative end', 'frame score', 'p-value', 'pos in align.', 'combined affinity score', 'support']
     """
 
-    fig = plt.figure(figsize=(10, 6))
-    ax1 = plt.subplot2grid((10,1),(0,0), rowspan = 5, colspan = 11)
-    ax2 = plt.subplot2grid((10,1),(6,0), sharex=ax1, rowspan = 2, colspan = 11)
-    ax3 = plt.subplot2grid((10,1),(9,0), sharex=ax1, rowspan = 2, colspan = 11)
+    if len(converted_cages) == 0:
+        fig = plt.figure(figsize=(10, 5))
+        ax1 = plt.subplot2grid((10,1),(0,0), rowspan = 6, colspan = 11)
+        ax2 = plt.subplot2grid((10,1),(6,0), sharex=ax1, rowspan = 2, colspan = 11)
+        ax3 = plt.subplot2grid((10,1),(8,0), sharex=ax1, rowspan = 2, colspan = 11)
+    else:
+        fig = plt.figure(figsize=(10, 6))
+        ax1 = plt.subplot2grid((12,1),(0,0), rowspan = 6, colspan = 11)
+        ax2 = plt.subplot2grid((12,1),(6,0), sharex=ax1, rowspan = 2, colspan = 11)
+        ax3 = plt.subplot2grid((12,1),(8,0), sharex=ax1, rowspan = 2, colspan = 11)
+        ax4 = plt.subplot2grid((12,1),(10,0), sharex=ax1, rowspan = 2, colspan = 11)
+
+
+
+##    fig = plt.figure(figsize=(10, 6))
+##    ax1 = plt.subplot2grid((10,1),(0,0), rowspan = 5, colspan = 11)
+##    ax2 = plt.subplot2grid((10,1),(6,0), sharex=ax1, rowspan = 2, colspan = 11)
+##    ax3 = plt.subplot2grid((10,1),(9,0), sharex=ax1, rowspan = 2, colspan = 11)
 
     # Generate data for each of the greatest_hits and plot corresponding bar
     color_series=['#FFB300','#803E75','#FF6800','#A6BDD7','#C10020','#CEA262','#817066','#007D34','#F6768E','#00538A','#FF7A5C','#53377A','#FF8E00','#B32851','#F4C800','#7F180D','#93AA00','#593315','#F13A13','#232C16']
@@ -1105,40 +1184,101 @@ def plot_promoter(alignment, alignment_len, promoter_before_tss, promoter_after_
     # Hide x-ticks for first two plots
     plt.setp(ax1.get_xticklabels(), visible=False)
     plt.setp(ax2.get_xticklabels(), visible=False)
-    
+
+    # CAGE plot
+    if len(converted_cages) > 0:
+        plt.setp(ax3.get_xticklabels(), visible=False)
+        cage_height = 1
+        for converted_cage in converted_cages:
+            converted_cage_start = converted_cage[0]
+            converted_cage_end = converted_cage[1]
+            description = converted_cage[2]
+            cage_x_series = []
+            cage_y_series = []
+            cage_center_point = float(converted_cage_start + converted_cage_end)/2
+            cage_x_series.append(cage_center_point)
+            cage_y_series.append(cage_height)
+
+            cage_width = abs(converted_cage_start - converted_cage_end)
+            ax4.bar(cage_x_series, cage_y_series, facecolor='black', edgecolor='black', align = 'center', width=cage_width, label=description)
+            ax4.axes.get_yaxis().set_visible(False)
+
+        ax4.text(1.02,.5,'CAGE\nPeaks', verticalalignment='center', transform=ax4.transAxes, rotation='vertical', fontsize=8)
+
     # ax1 predicted TFBSs
     num_cols = 6
     ax1.legend(bbox_to_anchor=[0., 1.05, 1.0, .102], loc='center', ncol=num_cols, prop={'size':9}, mode="expand", borderaxespad=0.)
     ax1.axhline(0, color = 'black')
-    ax1.set_ylabel("Number of supporting motifs", labelpad = 0)
+
+    # plot title
+    title_str = " ".join([transcript_name, transcript_id])
+    fig.text(0.065, 0.5, title_str, horizontalalignment='center', verticalalignment='center', transform=ax1.transAxes, rotation='vertical', fontsize=14)
+
+
+    # plt + ax labels
+    plt.xlabel("Nucleotide position before TSS", labelpad=5)
+    ax1.text(1.02,.5,'Predicted TFBSs', verticalalignment='center', transform=ax1.transAxes, rotation='vertical', fontsize=8)
+    ax1.set_ylabel("Number of supporting motifs", fontsize = 10, labelpad = 0)
+    ax2.text(1.02,.5,'Conservation', verticalalignment='center', transform=ax2.transAxes, rotation='vertical', fontsize=8)
+    ax3.text(1.02,.5,'CpG\nObs/Exp', verticalalignment='center', transform=ax3.transAxes, rotation='vertical', fontsize=8)
+
+    # ax ticks
     ax1.set_yticks(range(-1 * ((tens_y)*10), ((tens_y)*10)+1, 10))
-    title_str = transcript_name + " Predicted TFBSs"
-    fig.suptitle(title_str, x=.05, rotation='vertical', fontsize=18)
+    ax3.set_yticklabels(range(-1 * ((tens_y)*10), ((tens_y)*10)+1, 10), va='center')
+    plt.setp(ax1.get_yticklabels(), fontsize=8)
 
-    # variable x-ticks
-    dist = promoter_before_tss + promoter_after_tss
-    rough_interval = dist/10
-    power = int(np.log10(rough_interval))
-    xtick_jump = (rough_interval/(10**power)) * 10**power
-    ax3.set_xticks(range(-1 * promoter_before_tss, promoter_after_tss + 1, xtick_jump))
-
-    # ax2 conservation
     ax2.set_yticks([0, 1])
-    plt.setp(ax2.get_yticklabels(), fontsize=10)
-    ax2.set_title("Conservation")
+    plt.setp(ax2.get_yticklabels(), fontsize=6)
 
-    # ax3 CpG islands
-    ax3.axhline(0.6, color = 'black', alpha = 0.4)
+    ax3.set_xticks(range(-1 * promoter_before_tss, promoter_after_tss + 1, 100))
     ax3.set_yticks([0, 0.6, 1])
-    plt.setp(ax3.get_yticklabels(), fontsize=10)
-    ax3.set_title("CpG Observed/Expected Ratio")  
-    plt.xlabel("Nucleotide position before TSS", labelpad=10)
-
+    ax3.set_yticklabels([0, 0.6, 1], va='center')
+    plt.setp(ax3.get_yticklabels(), fontsize=6)
+    
+    # Misc    
+    ax3.axhline(0.6, color = 'black', alpha = 0.4)    
     plt.xlim([-1 * promoter_before_tss, promoter_after_tss + 1])
+
     # produce .svg figure
-    fig.savefig(os.path.join(target_dir, os.path.basename(target_dir) + '.Promoterhisto'  + '.svg'), facecolor='white')
+    plt.subplots_adjust(hspace=0.40)
+    fig.savefig(os.path.join(target_dir, os.path.basename(target_dir) + '.Promoterhisto'  + '.svg'), facecolor='white', bbox_inches='tight')
+##    fig.savefig(os.path.join(cage_svgs_dir, os.path.basename(target_directory) + '.Promoterhisto.svg'), facecolor='white', bbox_inches='tight')
     plt.clf()
     plt.close()
+
+
+    
+##    ax1.legend(bbox_to_anchor=[0., 1.05, 1.0, .102], loc='center', ncol=num_cols, prop={'size':9}, mode="expand", borderaxespad=0.)
+##    ax1.axhline(0, color = 'black')
+##    ax1.set_ylabel("Number of supporting motifs", labelpad = 0)
+##    ax1.set_yticks(range(-1 * ((tens_y)*10), ((tens_y)*10)+1, 10))
+##    title_str = transcript_name + " Predicted TFBSs"
+##    fig.suptitle(title_str, x=.05, rotation='vertical', fontsize=18)
+##
+##    # variable x-ticks
+##    dist = promoter_before_tss + promoter_after_tss
+##    rough_interval = dist/10
+##    power = int(np.log10(rough_interval))
+##    xtick_jump = (rough_interval/(10**power)) * 10**power
+##    ax3.set_xticks(range(-1 * promoter_before_tss, promoter_after_tss + 1, xtick_jump))
+##
+##    # ax2 conservation
+##    ax2.set_yticks([0, 1])
+##    plt.setp(ax2.get_yticklabels(), fontsize=10)
+##    ax2.set_title("Conservation")
+##
+##    # ax3 CpG islands
+##    ax3.axhline(0.6, color = 'black', alpha = 0.4)
+##    ax3.set_yticks([0, 0.6, 1])
+##    plt.setp(ax3.get_yticklabels(), fontsize=10)
+##    ax3.set_title("CpG Observed/Expected Ratio")  
+##    plt.xlabel("Nucleotide position before TSS", labelpad=10)
+##
+##    plt.xlim([-1 * promoter_before_tss, promoter_after_tss + 1])
+##    # produce .svg figure
+##    fig.savefig(os.path.join(target_dir, os.path.basename(target_dir) + '.Promoterhisto'  + '.svg'), facecolor='white')
+##    plt.clf()
+##    plt.close()
 
 
 ################################################################################
@@ -1156,6 +1296,7 @@ def main():
 
     print("Executing tfbs_footprinter version %s." % __version__)
     
+##    args, transcript_ids_filename, target_tfs_filename, cages_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir = get_args()
     args, transcript_ids_filename, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir = get_args()
 
     # Create directory for results
@@ -1170,6 +1311,9 @@ def main():
     TFBS_matrix_dict = load_json(TFBS_matrix_filename)
     TFBS_matrix_dict = {k.upper():v for k,v in TFBS_matrix_dict.iteritems()}
 
+    # load human CAGE locs
+    cage_dict_filename = os.path.join(script_dir, 'data/cage.promoters.grch38.json')
+    cage_dict = load_json(cage_dict_filename)
 
     total_time_start = time.time()
     logging.basicConfig(filename=os.path.join(output_dir, 'TFBS_analyzer2.log'),level=logging.DEBUG)
@@ -1182,6 +1326,11 @@ def main():
         target_tfs_list = compare_tfs_list_jaspar(target_tfs_list, TFBS_matrix_dict)
     else:
         target_tfs_list = TFBS_matrix_dict.keys()
+
+##    if cages_filename != None:
+##        cage_dict = parse_cages(cages_filename)
+##    else:
+##        cage_dict = {}
 
     if len(target_tfs_list) > 0:
     
@@ -1212,7 +1361,7 @@ def main():
                     # retrieve regulatory
                     regulatory_decoded_filename = os.path.join(target_dir, "regulatory_decoded.json")
                     regulatory_decoded = retrieve_regulatory(chromosome, strand, promoter_start, promoter_end, regulatory_decoded_filename, target_species)
-                    regulatory_decoded = load_json(regulatory_decoded_filename)
+##                    regulatory_decoded = load_json(regulatory_decoded_filename)
                     converted_reg_dict = reg_position_translate(tss,regulatory_decoded,promoter_start,promoter_end,strand,promoter_before_tss,promoter_after_tss)
 
                     # conservation
@@ -1238,9 +1387,12 @@ def main():
                     # extract the top x target_species hits supported by other species
                     top_x_greatest_hits_dict = top_x_greatest_hits(sorted_clusters_target_species_hits_list, top_x_tfs_count)
 
+                    # identify CAGEs in proximity to Ensembl TSS, convert for plotting
+                    converted_cages = cage_position_translate(transcript_id,tss,cage_dict,promoter_start,promoter_end,strand,promoter_before_tss,promoter_after_tss)
+
                     # plot the top x target_species hits
                     if len(top_x_greatest_hits_dict) > 0:
-                        plot_promoter(alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, conservation, cpg_list)
+                        plot_promoter(transcript_id,alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, conservation, cpg_list, converted_cages)
 
 
     total_time_end = time.time()

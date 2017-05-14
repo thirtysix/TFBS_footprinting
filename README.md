@@ -36,10 +36,12 @@ $ tfbs_footprinter PATH_TO/sample_ids.txt -tfs PATH_TO/tf_ids.txt -s homo_sapien
 ### 2.5 Arguments
 ```
 Executing tfbs_footprinter version 1.0.0b23.
-usage: tfbs_footprinter [-h] [--tf_ids_file] [--target_species]
-                        [--species_group] [--coverage] [--promoter_before_tss]
-                        [--promoter_after_tss] [--locality_threshold]
-                        [--conservation_min] [--top_x_tfs] [--output_dir]
+usage: tfbs_footprinter [-h] [--tf_ids_file] [--cage_ids_file]
+                        [--target_species] [--species_group] [--coverage]
+                        [--promoter_before_tss] [--promoter_after_tss]
+                        [--locality_threshold] [--conservation_min]
+                        [--top_x_tfs] [--output_dir]
+
 
 TFBS Footprinting - Identification of conserved vertebrate transcription factor binding sites (TFBSs).
 See https://github.com/thirtysix/TFBS_footprinting for additional usage instructions.
@@ -50,7 +52,7 @@ Example Usage:
     tfbs_footprinter PATH_TO/sample_ids.txt
 
     all arguments:
-    tfbs_footprinter PATH_TO/sample_ids.txt -tfs PATH_TO/tf_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
+	tfbs_footprinter PATH_TO/sample_ids.txt -tfs PATH_TO/tf_ids.txt -cgs PATH_TO/cages.json -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
 ------------------------------------------------------------------------------------------------------
 
 positional arguments:
@@ -66,7 +68,7 @@ optional arguments:
                         of Jaspar TFs to use in scoring alignment (see sample
                         file tf_ids.txt at
                         https://github.com/thirtysix/TFBS_footprinting)
-                        [default: all Jaspar TFs]
+                        [default: all Jaspar TFs]               
   --target_species , -s 
                         [default: "homo_sapiens"] - Target species (string),
                         options are located at (https://github.com/thirtysix/T
