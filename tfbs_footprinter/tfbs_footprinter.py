@@ -854,21 +854,32 @@ def find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_f
         for hit in hits:
             combined_affinity_score = 0
 ##            species_weights_sum = sum([hit[8] for hit in cluster])
-
 ##            target_species_hit = cluster[0]
+##            target_species_pwm_score_weight = target_species_hit[8]
             target_species_hit = hit
             target_species_pwm_score = target_species_hit[8]
-##            target_species_pwm_score_weight = target_species_hit[8]
+
+
             
             species_weights_sum = conservation_information_content(target_species_hit, alignment)
-            cage_weights_sum = cage_weights_summing(transcript_id, target_species_hit, cage_dist_weights_dict, cage_dict, converted_cages)
-            eqtls_weights_sum = eqtls_weights_summing(target_species_hit, converted_eqtls, gtex_weights_dict)
-            atac_weights_sum = atac_weights_summing(transcript_id, target_species_hit, atac_dist_weights_dict, converted_atac_seqs_in_promoter)
-##            metacluster_weights_sum = metacluster_weights_summing(transcript_id, target_species_hit, metacluster_dist_weights_dict, converted_metaclusters_in_promoter)
-            metacluster_weights_sum = metacluster_weights_summing(transcript_id, target_species_hit, metacluster_overlap_weights_dict, converted_metaclusters_in_promoter)
-            cpg_weight = cpg_weights_summing(transcript_id, target_species_hit, cpg_obsexp_weights_dict, cpg_list)
-            corr_weight_sum = cage_correlations_summing(target_species_hit, transcript_id, cage_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
+            
+            cage_weights_sum = 0
+            eqtls_weights_sum = 0
+            atac_weights_sum = 0
+            metacluster_weights_sum = 0
+            corr_weight_sum = 0
 
+            # datasets only available for homo sapiens
+            if target_species == "homo_sapiens":
+                cage_weights_sum = cage_weights_summing(transcript_id, target_species_hit, cage_dist_weights_dict, cage_dict, converted_cages)
+                eqtls_weights_sum = eqtls_weights_summing(target_species_hit, converted_eqtls, gtex_weights_dict)
+                atac_weights_sum = atac_weights_summing(transcript_id, target_species_hit, atac_dist_weights_dict, converted_atac_seqs_in_promoter)
+##            metacluster_weights_sum = metacluster_weights_summing(transcript_id, target_species_hit, metacluster_dist_weights_dict, converted_metaclusters_in_promoter)
+                metacluster_weights_sum = metacluster_weights_summing(transcript_id, target_species_hit, metacluster_overlap_weights_dict, converted_metaclusters_in_promoter)
+                corr_weight_sum = cage_correlations_summing(target_species_hit, transcript_id, cage_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
+                
+            cpg_weight = cpg_weights_summing(transcript_id, target_species_hit, cpg_obsexp_weights_dict, cpg_list)
+            
             experimental_weights = [species_weights_sum, cage_weights_sum, eqtls_weights_sum, atac_weights_sum, metacluster_weights_sum, cpg_weight, corr_weight_sum]
 ##            combined_affinity_score += sum(experimental_weights) + target_species_pwm_score_weight
             combined_affinity_score += sum(experimental_weights)+ target_species_pwm_score
