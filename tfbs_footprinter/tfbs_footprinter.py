@@ -20,8 +20,11 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import IUPAC
+from Bio.Alphabet import generic_dna
 from Bio import SeqIO
 from Bio import AlignIO
+from Bio.Align import AlignInfo
+from Bio.Align import MultipleSeqAlignment
 
 import httplib2
 import math
@@ -38,6 +41,14 @@ from operator import itemgetter
 import collections
 from bisect import bisect_left
 import itertools
+
+################################################################################
+# Description ##################################################################
+################################################################################
+"""
+Conservation is based on scoring of motif slice across alignment.
+Thresholds are allowed to be negative, as based on whole genome scoring.
+"""
 
 
 ################################################################################
@@ -112,7 +123,7 @@ def get_args():
                         help='(0-100,000) [default: 100] - Number (integer) of nucleotides downstream of TSS to include in analysis.')
     parser.add_argument('--locality_threshold', '-l', metavar='', choices = range(0, 101), type=int, default=5,
                         help='(0-100) [default: 5] - Nucleotide distance (integer) upstream/downstream within which TF predictions in other species will be included to support a hit in the target species.')
-    parser.add_argument('--conservation_min', '-c', metavar='', type=int, default=2,
+    parser.add_argument('--conservation_min', '-c', metavar='', type=int, default=1,
                         help='(1-20)[default: 2] - Minimum number (integer) of species a predicted TF is found in, in alignment, to be considered conserved .')
     parser.add_argument('--top_x_tfs', '-tx', metavar='', choices = range(1, 21), type=int, default=10,
                         help='(1-20) [default: 10] - Number (integer) of unique TFs to include in output .svg figure.')
@@ -290,6 +301,7 @@ def ensemblrest(query_type, options, output_type, ensembl_id=None, log=False):
     server = "http://rest.ensembl.org"
     
     full_query = server + query_type + ensembl_id + options
+    print full_query
 
     if log:
         logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), full_query]))
@@ -460,7 +472,7 @@ def PWM_scorer(seq, pwm, pwm_dict, pwm_type):
     return seq_score
 
 
-def tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, target_dir, pwm_score_threshold_dict, unaligned2aligned_index_dict, promoter_after_tss):
+def tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, target_dir, pwm_score_threshold_dict, all_pwms_loglikelihood_dict, unaligned2aligned_index_dict, promoter_after_tss):
     """
     1.Convert PFM to PWM for each TF in the Jaspar dictionary.
     2.Score all positions in the cleaned sequence
@@ -482,48 +494,57 @@ def tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, t
         align_chars = '-N .'
         mononuc_pwm_dict = {"A":0,"C":1,"G":2,"T":3}
         
-        for entry in alignment:
-            species = entry['species']
-            
-            # Remove alignment/ambiguous characters from the sequences
-            cleaned_seq = entry['seq']
-            for char in align_chars:
-                cleaned_seq = cleaned_seq.replace(char,"")
-            entry_seqrecord = SeqRecord(Seq(cleaned_seq, alphabet=IUPAC.unambiguous_dna), id=species)
-            forward_seq = str(entry_seqrecord.seq)
-            reverse_seq = str(entry_seqrecord.seq.reverse_complement())
-            seq_dict = {"+1": forward_seq, "-1":reverse_seq}
-            
+##        for entry in alignment:
+        entry = alignment[0]
+        species = entry['species']
+        
+        # Remove alignment/ambiguous characters from the sequences
+        cleaned_seq = entry['seq']
+        for char in align_chars:
+            cleaned_seq = cleaned_seq.replace(char,"")
+        entry_seqrecord = SeqRecord(Seq(cleaned_seq, alphabet=IUPAC.unambiguous_dna), id=species)
+        forward_seq = str(entry_seqrecord.seq)
+        reverse_seq = str(entry_seqrecord.seq.reverse_complement())
+        seq_dict = {"+1": forward_seq, "-1":reverse_seq}        
 
-            # generate background frequencies of each mono-nucleotide for forward and reverse strands
-            bg_nuc_freq_dict = {}
-            neg_bg_nuc_freq_dict = {}
-            nuc_list = 'ACGT'
-            
-                                                    
-            # calculate nucleotide frequencies for forward and reverse strands
-            for nuc in nuc_list:
-                bg_nuc_freq_dict[nuc] = (forward_seq.count(nuc) + 0.8) /(float(len(forward_seq)) + 0.8)
-            for nuc in nuc_list:
-                neg_bg_nuc_freq_dict[nuc] = (reverse_seq.count(nuc) + 0.8)/(float(len(reverse_seq)) + 0.8)
+        # generate background frequencies of each mono-nucleotide for forward and reverse strands
+        bg_nuc_freq_dict = {}
+        neg_bg_nuc_freq_dict = {}
+        nuc_list = 'ACGT'        
+                                                
+##            # calculate nucleotide frequencies for forward and reverse strands
+##            for nuc in nuc_list:
+##                bg_nuc_freq_dict[nuc] = (forward_seq.count(nuc) + 0.8) /(float(len(forward_seq)) + 0.8)
+##            for nuc in nuc_list:
+##                neg_bg_nuc_freq_dict[nuc] = (reverse_seq.count(nuc) + 0.8)/(float(len(reverse_seq)) + 0.8)
 
+        # Use empirical data from whole human genome, but limited to within -2000/+200 bp of TSSs
+        # http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0033204
+        # http://journals.plos.org/plosone/article/file?type=supplementary&id=info:doi/10.1371/journal.pone.0033204.s023
+##            bg_nuc_freq_dict = {'A':0.247, 'C':0.251, 'G':0.254, 'T':0.248}
+##            neg_bg_nuc_freq_dict = {'A':0.247, 'C':0.251, 'G':0.254, 'T':0.248}
 
-            # iterate through each tf_name and its motif
-            for tf_name in target_tfs_list:
-                if tf_name in TFBS_matrix_dict:
-                    tf_motif = TFBS_matrix_dict[tf_name]
-                    motif_length = len(tf_motif[0])
+        # https://arxiv.org/pdf/q-bio/0611041.pdf
+        # empirical data from complete genome
+        bg_nuc_freq_dict = {'A':0.292, 'C':0.207, 'G':0.207, 'T':0.292}
+        neg_bg_nuc_freq_dict = {'A':0.292, 'C':0.207, 'G':0.207, 'T':0.292}
+        
+        # iterate through each tf_name and its motif
+        for tf_name in target_tfs_list:
+            if tf_name in TFBS_matrix_dict:
+                tf_motif = TFBS_matrix_dict[tf_name]
+                motif_length = len(tf_motif[0])
+                
+                if motif_length > 0:
+                    # retrieve precomputed threshold and other information required for calculating the pvalue of the score
+                    # set score threshold to zero if threshold less than zero
+                    tf_pwm_score_threshold_dict = pwm_score_threshold_dict[tf_name]
+                    tf_pwm_score_threshold = tf_pwm_score_threshold_dict[0.01]
+                    pvals_scores_list = [[k,v] for k,v in tf_pwm_score_threshold_dict.iteritems()]
+                    pvals_scores_list_sorted = sorted(pvals_scores_list, key=itemgetter(1))
                     
-                    if motif_length > 0:
-                        # retrieve precomputed threshold and other information required for calculating the pvalue of the score
-                        # set score threshold to zero if threshold less than zero
-                        tf_pwm_score_threshold_dict = pwm_score_threshold_dict[tf_name]
-                        tf_pwm_score_threshold = tf_pwm_score_threshold_dict[0.001]
-                        pvals_scores_list = [[k,v] for k,v in tf_pwm_score_threshold_dict.iteritems()]
-                        pvals_scores_list_sorted = sorted(pvals_scores_list, key=itemgetter(1))
-                        
-                        if tf_pwm_score_threshold < 0:
-                            tf_pwm_score_threshold = 0
+##                    if tf_pwm_score_threshold < 0:
+##                        tf_pwm_score_threshold = 0
 
 ##                        pwm_score_threshold_list = pwm_score_threshold_dict[tf_name][1]
 ##                        pwm_score_threshold = pwm_score_threshold_list[0]
@@ -531,42 +552,67 @@ def tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, t
 ##                            pwm_score_threshold = 0
 ##                        random_scores_len = pwm_score_threshold_dict[tf_name][0][0]
 ##                        cutoff_index = pwm_score_threshold_dict[tf_name][0][1]
+                    
+                    # iterate through the forward and reverse strand sequences
+                    for strand, seq in seq_dict.iteritems():
+                        pwm = pwm_maker(strand, motif_length, tf_motif, bg_nuc_freq_dict, neg_bg_nuc_freq_dict)
                         
-                        # iterate through the forward and reverse strand sequences
-                        for strand, seq in seq_dict.iteritems():
-                            pwm = pwm_maker(strand, motif_length, tf_motif, bg_nuc_freq_dict, neg_bg_nuc_freq_dict)
-                            
-                            seq_length = len(seq)
-                            # iterate through the nt sequence, extract a current frame based on the motif size and score
-                            for i in range(0, seq_length - motif_length):
-                                current_frame = seq[i:i+motif_length]
-                                current_frame_score = PWM_scorer(current_frame, pwm, mononuc_pwm_dict, 'mono')
+                        seq_length = len(seq)
+                        # iterate through the nt sequence, extract a current frame based on the motif size and score
+                        for i in range(0, seq_length - motif_length):
+                            current_frame = seq[i:i+motif_length]
+                            current_frame_score = PWM_scorer(current_frame, pwm, mononuc_pwm_dict, 'mono')
+##                            print current_frame_score
 
-                                # keep results that are above the precomputed threshold
-                                if current_frame_score >= tf_pwm_score_threshold:
-                                    current_frame_score = round(current_frame_score, 2)
-                                    current_frame_score_pvalue = pvals_scores_list
-                                    scores_list_sorted = [x[1] for x in pvals_scores_list_sorted]
-                                    pval_index = bisect_left(scores_list_sorted, current_frame_score) - 1
-                                    if pval_index >= len(pvals_scores_list_sorted):
-                                        pval_index = -1
-                                    
-                                    current_frame_score_pvalue = pvals_scores_list_sorted[pval_index][0]
-                                    
+                            # keep results that are above the precomputed threshold
+                            if current_frame_score >= tf_pwm_score_threshold:
+##                            if current_frame_score >= -1000:
+                                current_frame_score = round(current_frame_score, 2)
+                                current_frame_score_pvalue = pvals_scores_list
+                                scores_list_sorted = [x[1] for x in pvals_scores_list_sorted]
+                                pval_index = bisect_left(scores_list_sorted, current_frame_score) - 1
+                                if pval_index >= len(pvals_scores_list_sorted):
+                                    pval_index = -1
+                               
+                                current_frame_score_pvalue = pvals_scores_list_sorted[pval_index][0]
+
+
+##                                # based on making a distribution PWM scores and generating weights
+##                                if tf_name in all_pwms_loglikelihood_dict:
+##                                    down_rounded_current_frame_score = round(math.floor(current_frame_score *10)/10, 1)
+####                                    if down_rounded_current_frame_score not in all_pwms_loglikelihood_dict[tf_name]:
+####                                        all_poss = all_pwms_loglikelihood_dict[tf_name].keys()
+####                                        all_poss.sort()
+####                                        print tf_name, all_poss
+##                                    target_species_pwm_score_weight = all_pwms_loglikelihood_dict[tf_name][down_rounded_current_frame_score]
+##                                    
+####                                    if current_frame_score in all_pwms_loglikelihood_dict[tf_name]:
+####                                        target_species_pwm_score_weight = all_pwms_loglikelihood_dict[tf_name][current_frame_score]
+####                                    else:
+####                                        possible_scores = all_pwms_loglikelihood_dict[tf_name].keys()
+####                                        possible_scores.sort()
+####                                        closest_score = possible_scores[bisect_left(possible_scores, current_frame_score)]
+####                                        target_species_pwm_score_weight = all_pwms_loglikelihood_dict[tf_name][closest_score]                                    
+
+##                                else:
+##                                    print tf_name, "not in there!"
+                                        
+                                
 ##                                    current_frame_score_pvalue = determine_score_pvalue(current_frame_score, pwm_score_threshold_list, random_scores_len, cutoff_index)
-                                    hit_loc_start, hit_loc_end, hit_loc_before_TSS_start, hit_loc_before_TSS_end = start_end_found_motif(i, strand, seq_length, promoter_after_tss, motif_length)
+                                hit_loc_start, hit_loc_end, hit_loc_before_TSS_start, hit_loc_before_TSS_end = start_end_found_motif(i, strand, seq_length, promoter_after_tss, motif_length)
 
-                                    # identify position in alignment from start of found motif in unaligned sequence
-                                    aligned_position = unaligned2aligned_index_dict[species][hit_loc_start]
+                                # identify position in alignment from start of found motif in unaligned sequence
+                                aligned_position = unaligned2aligned_index_dict[species][hit_loc_start]
+            
+                
+                                # add to results dictionary by tf_name
+                                if tf_name in tfbss_found_dict:
+                                    tfbss_found_dict[tf_name].append([tf_name, species, current_frame, strand, hit_loc_start, hit_loc_end, hit_loc_before_TSS_start, hit_loc_before_TSS_end, current_frame_score, current_frame_score_pvalue, aligned_position])
 
-                                    # add to results dictionary by tf_name
-                                    if tf_name in tfbss_found_dict:
-                                        tfbss_found_dict[tf_name].append([tf_name, species, current_frame, strand, hit_loc_start, hit_loc_end, hit_loc_before_TSS_start, hit_loc_before_TSS_end, current_frame_score, current_frame_score_pvalue, aligned_position])
+                                else:
+                                    tfbss_found_dict[tf_name] = [[tf_name, species, current_frame, strand, hit_loc_start, hit_loc_end, hit_loc_before_TSS_start, hit_loc_before_TSS_end, current_frame_score, current_frame_score_pvalue, aligned_position]]
 
-                                    else:
-                                        tfbss_found_dict[tf_name] = [[tf_name, species, current_frame, strand, hit_loc_start, hit_loc_end, hit_loc_before_TSS_start, hit_loc_before_TSS_end, current_frame_score, current_frame_score_pvalue, aligned_position]]
-
-
+        
         # sort results for each tf_name according to the position in alignment
         for tf_name, hits in tfbss_found_dict.iteritems():
             # ref-point
@@ -642,7 +688,102 @@ def unaligned2aligned_indexes(cleaned_aligned_filename):
     return unaligned2aligned_index_dict
 
 
-def find_clusters(target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_dist_weights_dict, cpg_list, cpg_obsexp_weights_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):
+##def find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_dist_weights_dict, cpg_list, cpg_obsexp_weights_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):
+##    """
+##    For each target species hit, find all hits in other species within the locality_threshold.
+##    Identify the highest score for each species within the locality threshold.
+##    Create combined affinity score from the target species hit and those best scores from each species.
+##    If two target species hits are within the locality threshold from one another, choose the hit which has the highest combined affinity score.
+##    """
+##    
+##    cluster_dict = {}
+##    for tf_name, hits in tfbss_found_dict.iteritems():
+##        cluster_dict[tf_name] = [] 
+##        clusters = []
+##        target_hit_seeds = []
+##        
+##        # identify all target_species hits for this tf_name
+##        for hit in hits:
+##            # ref-point
+##            if hit[1].lower() == target_species:
+##                target_hit_seeds.append(hit)
+##
+##        # sort all target_species hits by some criteria: e.g. pwm score ### not necessary in this implementation
+##        # ref-point
+##        target_hit_seeds = sorted(target_hit_seeds, key = itemgetter(8), reverse=True)
+##
+##        # for each target_species hit, find first all other hits in all other species within the locality threshold
+##        # select the best scoring hit from each species from these
+##        for target_hit_seed in target_hit_seeds:
+##            cluster = [target_hit_seed]
+##            target_species_strand = target_hit_seed[3]
+##            support_candidates = []
+##            cluster_added_species = []
+##                
+##            for hit in hits:
+##                # ref-point
+##                hit_strand = hit[3]
+##                # add a hit to support candidates if it is within the locality threshold, is on the same strand as the target_species seed, and is not a target_species seed
+##                if abs(target_hit_seed[-1] - hit[-1]) <= locality_threshold and hit_strand == target_species_strand and hit not in target_hit_seeds:
+##                    support_candidates.append(hit)
+##
+##            # sort the support candidates by their scores
+##            support_candidates_score_sorted = sorted(support_candidates, key=itemgetter(8), reverse=True)
+##
+##            # add to the cluster the best scoring support candidate from each species
+##            for support_candidate in support_candidates_score_sorted:
+##                support_candidate_species = support_candidate[1]
+##                if support_candidate_species not in cluster_added_species:
+##                    cluster.append(support_candidate)
+##                    cluster_added_species.append(support_candidate_species)
+##
+##            clusters.append(cluster)
+##
+##        # determine if each cluster meets length (strand) threshold
+##        for cluster in clusters:
+##            if len(cluster) >= strand_length_threshold:
+##                cluster_dict[tf_name].append(cluster)
+##                
+##    #### consider breaking to new function ####
+##    #### consider breaking to new function ####
+##    #### consider breaking to new function ####
+##                
+##    # Calculate combined affinity score for clusters, attach to target_species hit
+##    for tf_name, clusters in cluster_dict.iteritems():
+##        for cluster in clusters:
+##            # ref-point
+####            combined_affinity_score = sum([hit[8] for hit in cluster])
+##            combined_affinity_score = 0
+####            species_weights_sum = sum([hit[8] for hit in cluster])
+##
+##            target_species_hit = cluster[0]
+##            target_species_pwm_score = target_species_hit[8]
+##            species_weights_sum = conservation_information_content(cluster, alignment)
+##            cage_weights_sum = cage_weights_summing(transcript_id, cluster, cage_dist_weights_dict, cage_dict, converted_cages)
+##            eqtls_weights_sum = eqtls_weights_summing(cluster, converted_eqtls, gtex_weights_dict)
+##            atac_weights_sum = atac_weights_summing(transcript_id, cluster, atac_dist_weights_dict, converted_atac_seqs_in_promoter)
+##            metacluster_weights_sum = metacluster_weights_summing(transcript_id, cluster, metacluster_dist_weights_dict, converted_metaclusters_in_promoter)
+##            cpg_weight = cpg_weights_summing(transcript_id, cluster, cpg_obsexp_weights_dict, cpg_list)
+##            corr_weight_sum = cage_correlations_summing(cluster, transcript_id, cage_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
+##
+##            experimental_weights = [target_species_pwm_score, species_weights_sum, cage_weights_sum, eqtls_weights_sum, atac_weights_sum, metacluster_weights_sum, cpg_weight, corr_weight_sum]
+##            combined_affinity_score += sum(experimental_weights)
+##            combined_affinity_score = round(combined_affinity_score, 3)
+##
+##            cluster[0].append(len(cluster))
+##            cluster[0].append(combined_affinity_score)
+##            
+##            # add the tfbs support (len cluster) to the target_species hit
+##            
+##
+##            experimental_weights_rounded = [round(x, 3) if x!=0 else 0 for x in experimental_weights]
+##            cluster[0] += experimental_weights_rounded
+##
+##    return cluster_dict
+
+
+##def find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_dist_weights_dict, cpg_list, cpg_obsexp_weights_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):
+def find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):
     """
     For each target species hit, find all hits in other species within the locality_threshold.
     Identify the highest score for each species within the locality threshold.
@@ -650,98 +791,147 @@ def find_clusters(target_species, tfbss_found_dict, cleaned_aligned_filename, st
     If two target species hits are within the locality threshold from one another, choose the hit which has the highest combined affinity score.
     """
     
-    cluster_dict = {}
-    for tf_name, hits in tfbss_found_dict.iteritems():
-        cluster_dict[tf_name] = [] 
-        clusters = []
-        target_hit_seeds = []
-        
-        # identify all target_species hits for this tf_name
-        for hit in hits:
-            # ref-point
-            if hit[1].lower() == target_species:
-                target_hit_seeds.append(hit)
-
-        # sort all target_species hits by some criteria: e.g. pwm score ### not necessary in this implementation
-        # ref-point
-        target_hit_seeds = sorted(target_hit_seeds, key = itemgetter(8), reverse=True)
-
-        # for each target_species hit, find first all other hits in all other species within the locality threshold
-        # select the best scoring hit from each species from these
-        for target_hit_seed in target_hit_seeds:
-            cluster = [target_hit_seed]
-            target_species_strand = target_hit_seed[3]
-            support_candidates = []
-            cluster_added_species = []
-                
-            for hit in hits:
-                # ref-point
-                hit_strand = hit[3]
-                # add a hit to support candidates if it is within the locality threshold, is on the same strand as the target_species seed, and is not a target_species seed
-                if abs(target_hit_seed[-1] - hit[-1]) <= locality_threshold and hit_strand == target_species_strand and hit not in target_hit_seeds:
-                    support_candidates.append(hit)
-
-            # sort the support candidates by their scores
-            support_candidates_score_sorted = sorted(support_candidates, key=itemgetter(8), reverse=True)
-
-            # add to the cluster the best scoring support candidate from each species
-            for support_candidate in support_candidates_score_sorted:
-                support_candidate_species = support_candidate[1]
-                if support_candidate_species not in cluster_added_species:
-                    cluster.append(support_candidate)
-                    cluster_added_species.append(support_candidate_species)
-
-            clusters.append(cluster)
-
-        # determine if each cluster meets length (strand) threshold
-        for cluster in clusters:
-            if len(cluster) >= strand_length_threshold:
-                cluster_dict[tf_name].append(cluster)
-                
-    #### consider breaking to new function ####
-    #### consider breaking to new function ####
-    #### consider breaking to new function ####
+##    cluster_dict = {}
+##    for tf_name, hits in tfbss_found_dict.iteritems():
+##        cluster_dict[tf_name] = [] 
+##        clusters = []
+##        target_hit_seeds = []
+##        
+##        # identify all target_species hits for this tf_name
+##        for hit in hits:
+##            # ref-point
+##            if hit[1].lower() == target_species:
+##                target_hit_seeds.append(hit)
+##
+##        # sort all target_species hits by some criteria: e.g. pwm score ### not necessary in this implementation
+##        # ref-point
+##        target_hit_seeds = sorted(target_hit_seeds, key = itemgetter(8), reverse=True)
+##
+##        # for each target_species hit, find first all other hits in all other species within the locality threshold
+##        # select the best scoring hit from each species from these
+##        for target_hit_seed in target_hit_seeds:
+##            cluster = [target_hit_seed]
+##            target_species_strand = target_hit_seed[3]
+##            support_candidates = []
+##            cluster_added_species = []
+##                
+##            for hit in hits:
+##                # ref-point
+##                hit_strand = hit[3]
+##                # add a hit to support candidates if it is within the locality threshold, is on the same strand as the target_species seed, and is not a target_species seed
+##                if abs(target_hit_seed[-1] - hit[-1]) <= locality_threshold and hit_strand == target_species_strand and hit not in target_hit_seeds:
+##                    support_candidates.append(hit)
+##
+##            # sort the support candidates by their scores
+##            support_candidates_score_sorted = sorted(support_candidates, key=itemgetter(8), reverse=True)
+##
+##            # add to the cluster the best scoring support candidate from each species
+##            for support_candidate in support_candidates_score_sorted:
+##                support_candidate_species = support_candidate[1]
+##                if support_candidate_species not in cluster_added_species:
+##                    cluster.append(support_candidate)
+##                    cluster_added_species.append(support_candidate_species)
+##
+##            clusters.append(cluster)
+##
+##        # determine if each cluster meets length (strand) threshold
+##        for cluster in clusters:
+##            if len(cluster) >= strand_length_threshold:
+##                cluster_dict[tf_name].append(cluster)
+##                
+##    #### consider breaking to new function ####
+##    #### consider breaking to new function ####
+##    #### consider breaking to new function ####
                 
     # Calculate combined affinity score for clusters, attach to target_species hit
-    for tf_name, clusters in cluster_dict.iteritems():
-        for cluster in clusters:
+##    for tf_name, clusters in cluster_dict.iteritems():
+##        for cluster in clusters:
             # ref-point
 ##            combined_affinity_score = sum([hit[8] for hit in cluster])
+    cluster_dict = {}
+    for tf_name, hits in tfbss_found_dict.iteritems():
+##        print tf_name, len(hits)
+        for hit in hits:
             combined_affinity_score = 0
-            species_weights_sum = sum([hit[8] for hit in cluster])
-            cage_weights_sum = cage_weights_summing(transcript_id, cluster, cage_dist_weights_dict, cage_dict, converted_cages)
-            eqtls_weights_sum = eqtls_weights_summing(cluster, converted_eqtls, gtex_weights_dict)
-            atac_weights_sum = atac_weights_summing(transcript_id, cluster, atac_dist_weights_dict, converted_atac_seqs_in_promoter)
-            metacluster_weights_sum = metacluster_weights_summing(transcript_id, cluster, metacluster_dist_weights_dict, converted_metaclusters_in_promoter)
-            cpg_weight = cpg_weights_summing(transcript_id, cluster, cpg_obsexp_weights_dict, cpg_list)
-            corr_weight_sum = cage_correlations_summing(cluster, transcript_id, cage_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
+##            species_weights_sum = sum([hit[8] for hit in cluster])
+
+##            target_species_hit = cluster[0]
+            target_species_hit = hit
+            target_species_pwm_score = target_species_hit[8]
+##            target_species_pwm_score_weight = target_species_hit[8]
+            
+            species_weights_sum = conservation_information_content(target_species_hit, alignment)
+            cage_weights_sum = cage_weights_summing(transcript_id, target_species_hit, cage_dist_weights_dict, cage_dict, converted_cages)
+            eqtls_weights_sum = eqtls_weights_summing(target_species_hit, converted_eqtls, gtex_weights_dict)
+            atac_weights_sum = atac_weights_summing(transcript_id, target_species_hit, atac_dist_weights_dict, converted_atac_seqs_in_promoter)
+##            metacluster_weights_sum = metacluster_weights_summing(transcript_id, target_species_hit, metacluster_dist_weights_dict, converted_metaclusters_in_promoter)
+            metacluster_weights_sum = metacluster_weights_summing(transcript_id, target_species_hit, metacluster_overlap_weights_dict, converted_metaclusters_in_promoter)
+            cpg_weight = cpg_weights_summing(transcript_id, target_species_hit, cpg_obsexp_weights_dict, cpg_list)
+            corr_weight_sum = cage_correlations_summing(target_species_hit, transcript_id, cage_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
 
             experimental_weights = [species_weights_sum, cage_weights_sum, eqtls_weights_sum, atac_weights_sum, metacluster_weights_sum, cpg_weight, corr_weight_sum]
-            combined_affinity_score += sum(experimental_weights)
+##            combined_affinity_score += sum(experimental_weights) + target_species_pwm_score_weight
+            combined_affinity_score += sum(experimental_weights)+ target_species_pwm_score
             combined_affinity_score = round(combined_affinity_score, 3)
 
-            cluster[0].append(len(cluster))
-            cluster[0].append(combined_affinity_score)
+            if combined_affinity_score > -1000:
+                hit.append(len(alignment))
+                hit.append(combined_affinity_score)
             
-            # add the tfbs support (len cluster) to the target_species hit
-            
+            # add the tfbs support (len cluster) to the target_species hit        
+                experimental_weights_rounded = [round(x, 3) for x in experimental_weights]
+                hit += experimental_weights_rounded
 
-            experimental_weights_rounded = [round(x, 3) if x!=0 else 0 for x in experimental_weights]
-            cluster[0] += experimental_weights_rounded
+                if tf_name in cluster_dict:
+                    cluster_dict[tf_name].append([hit])
+                else:
+                    cluster_dict[tf_name] = [[hit]]
 
     return cluster_dict
 
 
-def eqtls_weights_summing(cluster, converted_eqtls, gtex_weights_dict):
+def conservation_information_content(target_species_hit, alignment):
+    """
+    Build an alignment object.
+    For the target hit, extract the slice of the alignment where it occurs and
+    calculate the 
+    """
+
+    if len(alignment) > 1:
+        # build alignment for analysis of conservation via information content
+        msl_list = []
+        for entry in alignment:
+            record = SeqRecord(Seq(entry['seq'], alphabet = generic_dna), id = entry['species'], description = "")
+            msl_list.append(record)
+
+        msl = MultipleSeqAlignment(msl_list)
+        msl_summary = AlignInfo.SummaryInfo(msl)
+
+        # extract location of this predicted binding site
+    ##    target_species_hit = cluster[0]
+    ##    target_species_hit = hit
+        start = target_species_hit[4]
+        end = target_species_hit[5]
+
+        info_content = msl_summary.information_content(start, end, chars_to_ignore = ['N'])
+
+    else:
+        info_content = 0
+
+    return info_content
+    
+
+
+def eqtls_weights_summing(target_species_hit, converted_eqtls, gtex_weights_dict):
     """
     Identify if any of the eQTLs associated with this gene overlap this predicted TFBS.
     Retrieve the log-likelihood scores for all of them.
     """
 
     eqtl_weights = []
-    human_hit = cluster[0]
-    motif_start = human_hit[6]
-    motif_end = human_hit[7]
+##    human_hit = cluster[0]
+    motif_start = target_species_hit[6]
+    motif_end = target_species_hit[7]
 
     if len(converted_eqtls) > 0:
         for converted_eqtl in converted_eqtls:
@@ -760,7 +950,7 @@ def eqtls_weights_summing(cluster, converted_eqtls, gtex_weights_dict):
 
     return eqtl_weights_sum
 
-def cage_correlations_summing(cluster, transcript_id, cage_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):
+def cage_correlations_summing(target_species_hit, transcript_id, cage_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):
     """
     Extract correlation values between CAGEs associated with a predicted TFBS protein,
     and CAGEs associated with the current gene.
@@ -770,8 +960,8 @@ def cage_correlations_summing(cluster, transcript_id, cage_dict, jasparTFs_trans
     target_cages = cage_dict[transcript_id]
 
     # cages for all transcripts of the predicted TFBS's proteins
-    human_hit = cluster[0]
-    tf_name = human_hit[0]
+##    human_hit = cluster[0]
+    tf_name = target_species_hit[0]
 
     # JASPAR tfs are often hetero multimers
     # therefore we should parse the individual proteins and identify transcripts for each
@@ -790,6 +980,7 @@ def cage_correlations_summing(cluster, transcript_id, cage_dict, jasparTFs_trans
     tf_cages = list(set([x[0] for x in tf_cages]))
     
     # iterate through all target cage vs tf cage combinations and sum correlation weights
+    corr_weights_ls = []
     corr_weight_sum = 0    
     for tf_cage in tf_cages:
         if tf_cage in cage_keys_dict:
@@ -804,14 +995,19 @@ def cage_correlations_summing(cluster, transcript_id, cage_dict, jasparTFs_trans
                         cage_correlation = cage_correlations_dict[tf_cage_key][target_cage_key]
                         cage_corr_weight = cage_corr_weights_dict[abs(cage_correlation)]
                         corr_weight_sum += cage_corr_weight
+                        corr_weights_ls.append(cage_corr_weight)
 
         else:
             print tf_cage
+
+    if len(corr_weights_ls) > 0:
+        corr_weights_ls.sort()
+        corr_weight_sum = corr_weights_ls[-1]
     
     return corr_weight_sum
            
 
-def cage_weights_summing(transcript_id, cluster, cage_dist_weights_dict, cage_dict, converted_cages):
+def cage_weights_summing(transcript_id, target_species_hit, cage_dist_weights_dict, cage_dict, converted_cages):
     """
     Generate a log-likelihood score for experimental variables
     e.g. distance to a CAGE, ATAC, TFBS metacluster.
@@ -819,12 +1015,12 @@ def cage_weights_summing(transcript_id, cluster, cage_dist_weights_dict, cage_di
     which are both within 5000 nt AND on the same strand.  Error check this.
     """
 
-    human_hit = cluster[0]
+##    human_hit = cluster[0]
     cage_weights = []
 
     if transcript_id in cage_dict:
-        motif_start = human_hit[6]
-        motif_end = human_hit[7]
+        motif_start = target_species_hit[6]
+        motif_end = target_species_hit[7]
         motif_midpoint = (motif_end + motif_start)/2
         
         for converted_cage in converted_cages:
@@ -844,7 +1040,7 @@ def cage_weights_summing(transcript_id, cluster, cage_dist_weights_dict, cage_di
     return cage_weights_sum
 
 
-def atac_weights_summing(transcript_id, cluster, atac_dist_weights_dict, converted_atac_seqs_in_promoter):
+def atac_weights_summing(transcript_id, target_species_hit, atac_dist_weights_dict, converted_atac_seqs_in_promoter):
     """
     Generate a log-likelihood score for experimental variables
     e.g. distance to a CAGE, ATAC, TFBS metacluster.
@@ -853,11 +1049,11 @@ def atac_weights_summing(transcript_id, cluster, atac_dist_weights_dict, convert
     """
 
     transcript_atacs = []
-    human_hit = cluster[0]
+##    human_hit = cluster[0]
     atac_weights = []
     
-    motif_start = human_hit[6]
-    motif_end = human_hit[7]
+    motif_start = target_species_hit[6]
+    motif_end = target_species_hit[7]
     motif_midpoint = (motif_end + motif_start)/2
     
     for converted_atac in converted_atac_seqs_in_promoter:            
@@ -876,7 +1072,40 @@ def atac_weights_summing(transcript_id, cluster, atac_dist_weights_dict, convert
     return atac_weights_sum
 
 
-def metacluster_weights_summing(transcript_id, cluster, metacluster_dist_weights_dict, converted_metaclusters_in_promoter):
+##def metacluster_weights_summing(transcript_id, target_species_hit, metacluster_dist_weights_dict, converted_metaclusters_in_promoter):
+##    """
+##    Generate a log-likelihood score for experimental variables
+##    e.g. distance to a CAGE, ATAC, TFBS metacluster.
+##    Possible problem, need to check that the CAGE dict includes only those CAGEs
+##    which are both within 5000 nt AND on the same strand.  Error check this.
+##    """
+##
+##
+##    metacluster_weights = []
+##
+####    if transcript_id in metacluster_dict:
+####        transcript_metaclusters = metacluster_dict[transcript_id]        
+##    motif_start = target_species_hit[6]
+##    motif_end = target_species_hit[7]
+##    motif_midpoint = (motif_end + motif_start)/2
+##    
+##    for converted_metacluster in converted_metaclusters_in_promoter:            
+##        transcript_metacluster_start = converted_metacluster[0]
+##        transcript_metacluster_end = converted_metacluster[1]
+##        metacluster_midpoint = (transcript_metacluster_start + transcript_metacluster_end)/2
+##
+##        motif_metacluster_dist = str(abs(motif_midpoint - metacluster_midpoint))
+##        
+##        if motif_metacluster_dist in metacluster_dist_weights_dict:
+##            metacluster_weight = metacluster_dist_weights_dict[motif_metacluster_dist]
+##            metacluster_weights.append(metacluster_weight)              
+##
+##    metacluster_weights_sum = sum(metacluster_weights)
+##
+##    return metacluster_weights_sum
+
+##def metacluster_weights_summing(transcript_id, target_species_hit, metacluster_dist_weights_dict, converted_metaclusters_in_promoter):
+def metacluster_weights_summing(transcript_id, target_species_hit, metacluster_overlap_weights_dict, converted_metaclusters_in_promoter):
     """
     Generate a log-likelihood score for experimental variables
     e.g. distance to a CAGE, ATAC, TFBS metacluster.
@@ -884,42 +1113,47 @@ def metacluster_weights_summing(transcript_id, cluster, metacluster_dist_weights
     which are both within 5000 nt AND on the same strand.  Error check this.
     """
 
-    transcript_metaclusters = []
-    human_hit = cluster[0]
-    metacluster_weights = []
+##    motif_midpoint = (motif_end + motif_start)/2
+##    metacluster_weights = []    
 
-##    if transcript_id in metacluster_dict:
-##        transcript_metaclusters = metacluster_dict[transcript_id]        
-    motif_start = human_hit[6]
-    motif_end = human_hit[7]
-    motif_midpoint = (motif_end + motif_start)/2
-    
+    num_ovelapping_metaclusters = 0     
+
+    motif_start = target_species_hit[6]
+    motif_end = target_species_hit[7]
+
     for converted_metacluster in converted_metaclusters_in_promoter:            
         transcript_metacluster_start = converted_metacluster[0]
         transcript_metacluster_end = converted_metacluster[1]
-        metacluster_midpoint = (transcript_metacluster_start + transcript_metacluster_end)/2
 
-        motif_metacluster_dist = str(abs(motif_midpoint - metacluster_midpoint))
-        
-        if motif_metacluster_dist in metacluster_dist_weights_dict:
-            metacluster_weight = metacluster_dist_weights_dict[motif_metacluster_dist]
-            metacluster_weights.append(metacluster_weight)              
+        overlap = overlap_range([motif_start, motif_end], [transcript_metacluster_start, transcript_metacluster_end])
 
-    metacluster_weights_sum = sum(metacluster_weights)
+        if len(overlap) > 0:
+            num_ovelapping_metaclusters += 1
+
+    if num_ovelapping_metaclusters in metacluster_overlap_weights_dict:
+        metacluster_weights_sum = metacluster_overlap_weights_dict[num_ovelapping_metaclusters]
+    else:
+        print "metacluster overlap sum not in weight dict"
+##        metacluster_midpoint = (transcript_metacluster_start + transcript_metacluster_end)/2
+##        motif_metacluster_dist = str(abs(motif_midpoint - metacluster_midpoint))
+##        if motif_metacluster_dist in metacluster_dist_weights_dict:
+##            metacluster_weight = metacluster_dist_weights_dict[motif_metacluster_dist]
+##            metacluster_weights.append(metacluster_weight)              
+##    metacluster_weights_sum = sum(metacluster_weights)
 
     return metacluster_weights_sum
 
 
-def cpg_weights_summing(transcript_id, cluster, cpg_obsexp_weights_dict, cpg_list):
+def cpg_weights_summing(transcript_id, target_species_hit, cpg_obsexp_weights_dict, cpg_list):
     """
     Retrieve a CpG weight score based on the CpG obs/exp of the midpoint of the
     current predicted TFBS.
     """
 
     # retrieve locations and CpG obs/exp score for the midpoint of this predicted TFBS
-    human_hit = cluster[0]
-    motif_start = human_hit[4]
-    motif_end = human_hit[5]
+##    human_hit = cluster[0]
+    motif_start = target_species_hit[4]
+    motif_end = target_species_hit[5]
     motif_midpoint = (motif_end + motif_start)/2
     cpg_obsexp = cpg_list[motif_midpoint][-1]
 
@@ -1033,7 +1267,8 @@ def sort_target_species_hits(cluster_dict):
     # ref-point     
         sorted_clusters_target_species_hits_dict[tf_name] = clusters_target_species_hits
         
-##    sorted_clusters_target_species_hits_list = sorted(sorted_clusters_target_species_hits_list, key=itemgetter(11), reverse = True)
+
+    # ref-point
     sorted_clusters_target_species_hits_list = sorted(sorted_clusters_target_species_hits_list, key=itemgetter(12), reverse = True)
 
     return sorted_clusters_target_species_hits_dict, sorted_clusters_target_species_hits_list
@@ -1352,7 +1587,7 @@ def reg_position_translate(tss,regulatory_decoded,promoter_start,promoter_end,st
 
     converted_reg_dict = {}
     for reg in regulatory_decoded:
-        reg_id = reg['ID']
+        reg_id = reg['id']
         reg_start = reg['start']
         reg_end = reg['end']
         description = reg['description']
@@ -1955,7 +2190,8 @@ def main():
 
     # analysis variables
     # dictionary of thresholds for each TF
-    pwm_score_threshold_dict_filename = os.path.join(script_dir, 'data/all_tfs_thresholds.001.json')
+##    pwm_score_threshold_dict_filename = os.path.join(script_dir, 'data/all_tfs_thresholds.001.json')
+    pwm_score_threshold_dict_filename = os.path.join(script_dir, 'data/all_tfs_thresholds.jaspar_2018.01.json')
     pwm_score_threshold_dicta = load_json(pwm_score_threshold_dict_filename)
     pwm_score_threshold_dict = {}
     for k,v in pwm_score_threshold_dicta.iteritems():
@@ -1965,6 +2201,10 @@ def main():
     TFBS_matrix_filename = os.path.join(script_dir, 'data/pwms.json')
     TFBS_matrix_dict = load_json(TFBS_matrix_filename)
     TFBS_matrix_dict = {k.upper():v for k,v in TFBS_matrix_dict.iteritems()}
+
+    # load JASPAR PWM score weights
+    all_pwms_loglikelihood_dict_filename = os.path.join(script_dir, 'data/all_pwms_loglikelihood_dict.reduced.msg')
+    all_pwms_loglikelihood_dict = load_msgpack(all_pwms_loglikelihood_dict_filename)
 
     # load human CAGE locs occuring near promoters
     cage_dict_filename = os.path.join(script_dir, 'data/cage.promoters.grch38.2000.genomic_coords.msg')
@@ -1995,14 +2235,19 @@ def main():
     atac_dist_weights_dict_filename = os.path.join(script_dir, 'data/atac_dist_weights.json')
     atac_dist_weights_dict = load_json(atac_dist_weights_dict_filename)
 
-    # load metacluster dist weights
-    metacluster_dist_weights_dict_filename = os.path.join(script_dir, 'data/metacluster_dist_weights.json')
-    metacluster_dist_weights_dict = load_json(metacluster_dist_weights_dict_filename)
+##    # load metacluster dist weights
+##    metacluster_dist_weights_dict_filename = os.path.join(script_dir, 'data/metacluster_dist_weights.json')
+##    metacluster_dist_weights_dict = load_json(metacluster_dist_weights_dict_filename)
+
+    # load metacluster overlap weights
+    metacluster_overlap_weights_dict_filename = os.path.join(script_dir, 'data/metaclusters_overlap_weights_dict.json')
+    metacluster_overlap_weights_dict = load_json(metacluster_overlap_weights_dict_filename)
+    metacluster_overlap_weights_dict = {float(k):float(v) for k,v in metacluster_overlap_weights_dict.iteritems()}
 
     # load CpG score weights
     cpg_obsexp_weights_dict_filename = os.path.join(script_dir, 'data/cpg_obsexp_weights.json')
     cpg_obsexp_weights_dict = load_json(cpg_obsexp_weights_dict_filename)
-    cpg_obsexp_weights_dict = {float(k):float(v) for k,v in  cpg_obsexp_weights_dict.iteritems()}
+    cpg_obsexp_weights_dict = {float(k):float(v) for k,v in cpg_obsexp_weights_dict.iteritems()}
 
     # load GTEx variants
     gtex_variants_filename = os.path.join(script_dir, 'data/gtex_reduced.loc_effect.uniques.grch38.msg')
@@ -2020,6 +2265,8 @@ def main():
     # load human ATAC-Seq from Encode project
     atac_seq_dict_filename = os.path.join(script_dir, 'data/atac-seq.combined.merged.msg')
     atac_seq_dict = load_msgpack(atac_seq_dict_filename)
+
+##    print "All files loaded"
     
     for args_list in args_lists:
         args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir = args_list
@@ -2034,7 +2281,7 @@ def main():
         logging.basicConfig(filename=os.path.join(os.path.dirname(output_dir), 'TFBS_analyzer2.log'),level=logging.DEBUG)
         logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), str(args_list)]))
 
-        if target_tfs_filename == "":
+        if target_tfs_filename == "" or target_tfs_filename == None:
             target_tfs_filename = None
             target_tfs_list = TFBS_matrix_dict.keys()
 
@@ -2092,11 +2339,12 @@ def main():
                 unaligned2aligned_index_dict = unaligned2aligned_indexes(cleaned_aligned_filename)
 
                 # score alignment for tfbss
-                tfbss_found_dict = tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, target_dir, pwm_score_threshold_dict, unaligned2aligned_index_dict, promoter_after_tss)
-
+                tfbss_found_dict = tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, target_dir, pwm_score_threshold_dict, all_pwms_loglikelihood_dict, unaligned2aligned_index_dict, promoter_after_tss)
+            
                 # sort through scores, identify hits in target_species supported in other species
-                cluster_dict = find_clusters(target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_dist_weights_dict, cpg_list, cpg_obsexp_weights_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
-
+##                cluster_dict = find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_dist_weights_dict, cpg_list, cpg_obsexp_weights_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
+                cluster_dict = find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
+                
                 # write cluster entries to .csv
                 cluster_table_writer(cluster_dict, target_dir, ".clusters.", locality_threshold)
 
