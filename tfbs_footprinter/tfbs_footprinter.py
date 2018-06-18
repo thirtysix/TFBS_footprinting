@@ -129,9 +129,10 @@ def get_args():
                         help='(1-20) [default: 10] - Number (integer) of unique TFs to include in output .svg figure.')
     parser.add_argument('--output_dir', '-o', metavar='', type=str, default=os.path.join(curdir, "tfbs_results"),
                         help=" ".join(['[default:', os.path.join(curdir, "tfbs_results"), '] - Full path of directory where result directories will be output.']))
+    parser.add_argument('--pval', '-p', type=float, default=0.01, help='P-value (float) for determine score cutoff (range: 0.1 to 0.0000001) [default: 0.001]')
 
     # Functionality to add later
-    ##parser.add_argument('--pval', '-p', type=float, default=0.001, help='P-value (float) for determine score cutoff (range: 0.001 to 0.0000001) [default: 0.001]')
+    
     ##parser.add_argument('--noclean', '-nc', action = 'store_true', help='Optional: Don't clean retrieved alignment. Off by default.')
 
     args = parser.parse_args()
@@ -214,7 +215,15 @@ def get_args():
                     if output_dir == "":
                         print "No output directory specified in line", i, ".  Defaulting to", os.path.join(curdir, "tfbs_results")
 
-                    parsed_cleaned_arg_line = [transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir]
+                    # p-value
+                    try:
+                        pval = float(pval)
+                    except:
+                        print "Entered p-value threshold", pval, "in line", i, "is not float.  Defaulting to 0.01."
+                        pval = 0.01
+                        
+
+                    parsed_cleaned_arg_line = [transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir, pval]
                     args_lists.append([args, transcript_ids_filename] + parsed_cleaned_arg_line)
 
     else:
@@ -231,10 +240,11 @@ def get_args():
         promoter_after_tss = args.promoter_after_tss
         top_x_tfs_count = args.top_x_tfs
         output_dir = args.output_dir
+        pval = args.pval
         
         transcript_ids_list = parse_transcript_ids(transcript_ids_filename)
         for transcript_id in transcript_ids_list:
-            args_list = [args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir]
+            args_list = [args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir, pval]
             args_lists.append(args_list)
 ##        args_lists = [[args, transcript_ids_filename, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count]]
 ##        args_lists = [[args, transcript_ids_filename, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir]]
@@ -472,7 +482,7 @@ def PWM_scorer(seq, pwm, pwm_dict, pwm_type):
     return seq_score
 
 
-def tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, target_dir, pwm_score_threshold_dict, all_pwms_loglikelihood_dict, unaligned2aligned_index_dict, promoter_after_tss):
+def tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, target_dir, pwm_score_threshold_dict, all_pwms_loglikelihood_dict, unaligned2aligned_index_dict, promoter_after_tss, pval):
     """
     1.Convert PFM to PWM for each TF in the Jaspar dictionary.
     2.Score all positions in the cleaned sequence
@@ -539,7 +549,7 @@ def tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, t
                     # retrieve precomputed threshold and other information required for calculating the pvalue of the score
                     # set score threshold to zero if threshold less than zero
                     tf_pwm_score_threshold_dict = pwm_score_threshold_dict[tf_name]
-                    tf_pwm_score_threshold = tf_pwm_score_threshold_dict[0.01]
+                    tf_pwm_score_threshold = tf_pwm_score_threshold_dict[pval]
                     pvals_scores_list = [[k,v] for k,v in tf_pwm_score_threshold_dict.iteritems()]
                     pvals_scores_list_sorted = sorted(pvals_scores_list, key=itemgetter(1))
                     
@@ -2202,7 +2212,7 @@ def main():
     # analysis variables
     # dictionary of thresholds for each TF
 ##    pwm_score_threshold_dict_filename = os.path.join(script_dir, 'data/all_tfs_thresholds.001.json')
-    pwm_score_threshold_dict_filename = os.path.join(script_dir, 'data/all_tfs_thresholds.jaspar_2018.01.json')
+    pwm_score_threshold_dict_filename = os.path.join(script_dir, 'data/all_tfs_thresholds.jaspar_2018.1.json')
     pwm_score_threshold_dicta = load_json(pwm_score_threshold_dict_filename)
     pwm_score_threshold_dict = {}
     for k,v in pwm_score_threshold_dicta.iteritems():
@@ -2280,7 +2290,7 @@ def main():
 ##    print "All files loaded"
     
     for args_list in args_lists:
-        args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir = args_list
+        args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir, pval = args_list
 
         print transcript_id
 
@@ -2350,7 +2360,7 @@ def main():
                 unaligned2aligned_index_dict = unaligned2aligned_indexes(cleaned_aligned_filename)
 
                 # score alignment for tfbss
-                tfbss_found_dict = tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, target_dir, pwm_score_threshold_dict, all_pwms_loglikelihood_dict, unaligned2aligned_index_dict, promoter_after_tss)
+                tfbss_found_dict = tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, target_dir, pwm_score_threshold_dict, all_pwms_loglikelihood_dict, unaligned2aligned_index_dict, promoter_after_tss, pval)
             
                 # sort through scores, identify hits in target_species supported in other species
 ##                cluster_dict = find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_dist_weights_dict, cpg_list, cpg_obsexp_weights_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
