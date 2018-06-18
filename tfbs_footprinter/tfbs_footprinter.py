@@ -1915,19 +1915,29 @@ def atac_pos_translate(atac_seq_dict, chromosome, promoter_start, promoter_end, 
     return converted_atac_seqs_in_promoter
     
 
-def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, conservation, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter):
+def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, conservation, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls):
     """
     Plot the predicted TFBSs, onto a 5000 nt promoter graph, which possess support above the current strand threshold.
     ['binding_prot', 'species', 'motif', 'strand', 'start', 'end', 'TSS-relative start', 'TSS-relative end', 'frame score', 'p-value', 'pos in align.', 'combined affinity score', 'support']
     """
 
     fig = plt.figure(figsize=(10, 6))
-    ax1 = plt.subplot2grid((16,1),(0,0), rowspan = 6, colspan = 11)
-    ax2 = plt.subplot2grid((16,1),(6,0), sharex=ax1, rowspan = 2, colspan = 11)
-    ax3 = plt.subplot2grid((16,1),(8,0), sharex=ax1, rowspan = 2, colspan = 11)
-    ax4 = plt.subplot2grid((16,1),(10,0), sharex=ax1, rowspan = 2, colspan = 11)
-    ax5 = plt.subplot2grid((16,1),(12,0), sharex=ax1, rowspan = 2, colspan = 11)
-    ax6 = plt.subplot2grid((16,1),(14,0), sharex=ax1, rowspan = 2, colspan = 11)
+    ax1 = plt.subplot2grid((18,1),(0,0), rowspan = 6, colspan = 11)
+    ax2 = plt.subplot2grid((18,1),(6,0), sharex=ax1, rowspan = 2, colspan = 11)
+    ax3 = plt.subplot2grid((18,1),(8,0), sharex=ax1, rowspan = 2, colspan = 11)
+    ax4 = plt.subplot2grid((18,1),(10,0), sharex=ax1, rowspan = 2, colspan = 11)
+    ax5 = plt.subplot2grid((18,1),(12,0), sharex=ax1, rowspan = 2, colspan = 11)
+    ax6 = plt.subplot2grid((18,1),(14,0), sharex=ax1, rowspan = 2, colspan = 11)
+    ax7 = plt.subplot2grid((18,1),(16,0), sharex=ax1, rowspan = 2, colspan = 11)
+
+
+##    fig = plt.figure(figsize=(10, 6))
+##    ax1 = plt.subplot2grid((16,1),(0,0), rowspan = 6, colspan = 11)
+##    ax2 = plt.subplot2grid((16,1),(6,0), sharex=ax1, rowspan = 2, colspan = 11)
+##    ax3 = plt.subplot2grid((16,1),(8,0), sharex=ax1, rowspan = 2, colspan = 11)
+##    ax4 = plt.subplot2grid((16,1),(10,0), sharex=ax1, rowspan = 2, colspan = 11)
+##    ax5 = plt.subplot2grid((16,1),(12,0), sharex=ax1, rowspan = 2, colspan = 11)
+##    ax6 = plt.subplot2grid((16,1),(14,0), sharex=ax1, rowspan = 2, colspan = 11)
 
 ##    if len(converted_cages) == 0:
 ##        fig = plt.figure(figsize=(10, 5))
@@ -1994,7 +2004,6 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
         binding_support = sorted_great_hit[11]
         binding_strand = int(sorted_great_hit[3])
 
-
         TF_center_point = float(binding_site_start + binding_site_end)/2
         TF_width = abs(binding_site_start - binding_site_end)
         x_series.append(TF_center_point)
@@ -2046,7 +2055,6 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
             else:
                 gpc.append(top_obs2exp)
 
-    ax3.set_yticks(range(0,2))
     ax3.bar(range(-1 * alignment_len + promoter_after_tss, promoter_after_tss), gpc, color = 'black')
    
     # CAGE plot
@@ -2062,8 +2070,8 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
         cage_y_series.append(cage_height)
 
         cage_width = abs(converted_cage_start - converted_cage_end)
-        ax4.bar(cage_x_series, cage_y_series, facecolor='black', edgecolor='black', align = 'center', width=cage_width, label=description)
-    ax4.axes.get_yaxis().set_visible(False)   
+        ax7.bar(cage_x_series, cage_y_series, facecolor='black', edgecolor='black', align = 'center', width=cage_width, label=description)
+    ax7.axes.get_yaxis().set_visible(False)   
 
     # GTRD plot
     gtrd_height = 1
@@ -2093,16 +2101,28 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
         
         gtrd_x_series = []
         gtrd_y_series = []
-        gtrd_center_point = float(converted_atac_seq_start + converted_atac_seq_end)/2
-        gtrd_x_series.append(gtrd_center_point)
+        gtrd_midpoint = float(converted_atac_seq_start + converted_atac_seq_end)/2
+        gtrd_x_series.append(gtrd_midpoint)
         gtrd_y_series.append(gtrd_height)
 
         gtrd_width = abs(converted_atac_seq_start - converted_atac_seq_end)
         ax6.bar(gtrd_x_series, gtrd_y_series, facecolor='black', edgecolor='black', alpha=alpha_gradient, align = 'center', width=gtrd_width)
     ax6.axes.get_yaxis().set_visible(False)
 
-
+    # eQTLs plot
+    magnitudes = []
+    for converted_eqtl in converted_eqtls:
     
+        converted_eqtl_start, converted_eqtl_end, converted_eqtl_mag = converted_eqtl
+        if -1 * promoter_before_tss <= converted_eqtl_start <= promoter_after_tss + 1 or -1 * promoter_before_tss <= converted_eqtl_end <= promoter_after_tss + 1:
+            eqtl_midpoint = float(converted_eqtl_start + converted_eqtl_end)/2
+            eqtl_width = abs(converted_eqtl_start - converted_eqtl_end)
+            eqtl_x_series = []
+            eqtl_y_series = []
+            eqtl_x_series.append(eqtl_midpoint)
+            eqtl_y_series.append(converted_eqtl_mag)
+            magnitudes.append(converted_eqtl_mag)
+            ax4.bar(eqtl_x_series, eqtl_y_series, facecolor='black', edgecolor='black', align = 'center', width=eqtl_width)        
 
     # ax1 predicted TFBSs
     num_cols = 6
@@ -2120,6 +2140,8 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
     plt.setp(ax3.get_xticklabels(), visible=False)
     plt.setp(ax4.get_xticklabels(), visible=False)
     plt.setp(ax5.get_xticklabels(), visible=False)
+    plt.setp(ax6.get_xticklabels(), visible=False)
+
 
     # plt + ax labels
     plt.xlabel("Nucleotide position before TSS", labelpad=5)
@@ -2127,67 +2149,50 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
     ax1.set_ylabel("Number of supporting motifs", fontsize = 10, labelpad = 0)
     ax2.text(1.02,.5,'Conservation', verticalalignment='center', transform=ax2.transAxes, rotation='vertical', fontsize=8)
     ax3.text(1.02,.5,'CpG\nObs/Exp', verticalalignment='center', transform=ax3.transAxes, rotation='vertical', fontsize=8)
-    ax4.text(1.02,.5,'CAGE\nPeaks', verticalalignment='center', transform=ax4.transAxes, rotation='vertical', fontsize=8)
+    ax4.text(1.02,.5,'eQTLs', verticalalignment='center', transform=ax4.transAxes, rotation='vertical', fontsize=8)
     ax5.text(1.02,.5,'GTRD\nMeta\nClusters', verticalalignment='center', transform=ax5.transAxes, rotation='vertical', fontsize=8)
     ax6.text(1.02,.5,'ATAC-Seq', verticalalignment='center', transform=ax6.transAxes, rotation='vertical', fontsize=8)
+    ax7.text(1.02,.5,'CAGE\nPeaks', verticalalignment='center', transform=ax7.transAxes, rotation='vertical', fontsize=8)
 
-    # ax ticks
+    ## set ticks
+    # ax1-predicted TFBSs
     ax1.set_yticks(range(-1 * ((tens_y)*10), ((tens_y)*10)+1, 10))
-    ax3.set_yticklabels(range(-1 * ((tens_y)*10), ((tens_y)*10)+1, 10), va='center')
     plt.setp(ax1.get_yticklabels(), fontsize=8)
 
+    # ax2-conservation
     ax2.set_yticks([0, 1])
     plt.setp(ax2.get_yticklabels(), fontsize=6)
 
-    ax3.set_xticks(range(-1 * promoter_before_tss, promoter_after_tss + 1, 100))
+    # ax3-CpG
     ax3.set_yticks([0, 0.6, 1])
     ax3.set_yticklabels([0, 0.6, 1], va='center')
     plt.setp(ax3.get_yticklabels(), fontsize=6)
-    
-    # Misc    
-    ax3.axhline(0.6, color = 'black', alpha = 0.4)    
-    plt.xlim([-1 * promoter_before_tss, promoter_after_tss + 1])
 
+    # ax4-eQTL
+    magnitudes.sort()
+    ax4_yticks = [math.floor(magnitudes[0]), 0, math.ceil(magnitudes[-1])]
+    ax4.set_yticks(ax4_yticks)
+    ax4.set_yticklabels(ax4_yticks, va='center')
+    plt.setp(ax4.get_yticklabels(), fontsize=6)
+
+    # Misc    
+    ax3.axhline(0.6, color = 'black', alpha = 0.4)
+    ax4.axhline(0.0, color = 'black', alpha = 0.4)
+    plt.xlim([-1 * promoter_before_tss, promoter_after_tss + 1])
+    
     # produce .svg figure
     plt.subplots_adjust(hspace=0.40)
     fig.savefig(os.path.join(target_dir, os.path.basename(target_dir) + '.Promoterhisto'  + '.svg'), facecolor='white', bbox_inches='tight')
-##    fig.savefig(os.path.join(cage_svgs_dir, os.path.basename(target_directory) + '.Promoterhisto.svg'), facecolor='white', bbox_inches='tight')
     plt.clf()
     plt.close()
-
-
     
-##    ax1.legend(bbox_to_anchor=[0., 1.05, 1.0, .102], loc='center', ncol=num_cols, prop={'size':9}, mode="expand", borderaxespad=0.)
-##    ax1.axhline(0, color = 'black')
-##    ax1.set_ylabel("Number of supporting motifs", labelpad = 0)
-##    ax1.set_yticks(range(-1 * ((tens_y)*10), ((tens_y)*10)+1, 10))
-##    title_str = transcript_name + " Predicted TFBSs"
-##    fig.suptitle(title_str, x=.05, rotation='vertical', fontsize=18)
-##
 ##    # variable x-ticks
 ##    dist = promoter_before_tss + promoter_after_tss
 ##    rough_interval = dist/10
 ##    power = int(np.log10(rough_interval))
 ##    xtick_jump = (rough_interval/(10**power)) * 10**power
 ##    ax3.set_xticks(range(-1 * promoter_before_tss, promoter_after_tss + 1, xtick_jump))
-##
-##    # ax2 conservation
-##    ax2.set_yticks([0, 1])
-##    plt.setp(ax2.get_yticklabels(), fontsize=10)
-##    ax2.set_title("Conservation")
-##
-##    # ax3 CpG islands
-##    ax3.axhline(0.6, color = 'black', alpha = 0.4)
-##    ax3.set_yticks([0, 0.6, 1])
-##    plt.setp(ax3.get_yticklabels(), fontsize=10)
-##    ax3.set_title("CpG Observed/Expected Ratio")  
-##    plt.xlabel("Nucleotide position before TSS", labelpad=10)
-##
-##    plt.xlim([-1 * promoter_before_tss, promoter_after_tss + 1])
-##    # produce .svg figure
-##    fig.savefig(os.path.join(target_dir, os.path.basename(target_dir) + '.Promoterhisto'  + '.svg'), facecolor='white')
-##    plt.clf()
-##    plt.close()
+
 
 
 ################################################################################
@@ -2379,7 +2384,7 @@ def main():
 
                 # plot the top x target_species hits
                 if len(top_x_greatest_hits_dict) > 0:
-                    plot_promoter(transcript_id,alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, conservation, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter)
+                    plot_promoter(transcript_id,alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, conservation, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls)
 
         logging.info("\n")
     total_time_end = time.time()
