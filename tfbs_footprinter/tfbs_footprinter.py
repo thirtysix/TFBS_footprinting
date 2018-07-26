@@ -129,10 +129,10 @@ def get_args():
                         help='(1-20) [default: 10] - Number (integer) of unique TFs to include in output .svg figure.')
     parser.add_argument('--output_dir', '-o', metavar='', type=str, default=os.path.join(curdir, "tfbs_results"),
                         help=" ".join(['[default:', os.path.join(curdir, "tfbs_results"), '] - Full path of directory where result directories will be output.']))
+    # for now pvalue refers to the PWM score, in the future it will need to relate to the combined affinity score
     parser.add_argument('--pval', '-p', type=float, default=0.01, help='P-value (float) for determine score cutoff (range: 0.1 to 0.0000001) [default: 0.001]')
 
     # Functionality to add later
-    
     ##parser.add_argument('--noclean', '-nc', action = 'store_true', help='Optional: Don't clean retrieved alignment. Off by default.')
 
     args = parser.parse_args()
@@ -626,9 +626,14 @@ def tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, t
         # sort results for each tf_name according to the position in alignment
         for tf_name, hits in tfbss_found_dict.iteritems():
             # ref-point
-##            tfbss_found_dict[tf_name] = sorted(hits, key = itemgetter(-1))
+
+##            timing_start = time.time()
             tfbss_found_dict[tf_name] = sorted(hits, key = itemgetter(10))
-                    
+##            hits.sort(key=lambda x: x[10])
+##            tfbss_found_dict[tf_name] = hits
+##            timing_end = time.time()
+##            print "timing for sort at position 10", timing_end - timing_start
+            
         # save the results to file
         dump_json(tfbss_found_dict_outfilename, tfbss_found_dict)
 
@@ -793,7 +798,7 @@ def unaligned2aligned_indexes(cleaned_aligned_filename):
 
 
 ##def find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_dist_weights_dict, cpg_list, cpg_obsexp_weights_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):
-def find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):
+def find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):
     """
     For each target species hit, find all hits in other species within the locality_threshold.
     Identify the highest score for each species within the locality threshold.
@@ -868,9 +873,7 @@ def find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_f
 ##            target_species_pwm_score_weight = target_species_hit[8]
             target_species_hit = hit
             target_species_pwm_score = target_species_hit[8]
-
-
-            
+       
             species_weights_sum = conservation_information_content(target_species_hit, alignment)
             
             cage_weights_sum = 0
@@ -879,34 +882,41 @@ def find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_f
             metacluster_weights_sum = 0
             corr_weight_sum = 0
 
+            calcs_start_time = time.time()
             # datasets only available for homo sapiens
-            if target_species == "homo_sapiens":
+            if target_species == "homo_sapiens":                
                 cage_weights_sum = cage_weights_summing(transcript_id, target_species_hit, cage_dist_weights_dict, cage_dict, converted_cages)
+##                print "cage_weights_sum", time.time() - calcs_start_time
                 eqtls_weights_sum = eqtls_weights_summing(target_species_hit, converted_eqtls, gtex_weights_dict)
+##                print "eqtls_weights_sum", time.time() - calcs_start_time
                 atac_weights_sum = atac_weights_summing(transcript_id, target_species_hit, atac_dist_weights_dict, converted_atac_seqs_in_promoter)
+##                print "atac_weights_sum", time.time() - calcs_start_time
 ##            metacluster_weights_sum = metacluster_weights_summing(transcript_id, target_species_hit, metacluster_dist_weights_dict, converted_metaclusters_in_promoter)
                 metacluster_weights_sum = metacluster_weights_summing(transcript_id, target_species_hit, metacluster_overlap_weights_dict, converted_metaclusters_in_promoter)
+##                print "metacluster_weights_sum", time.time() - calcs_start_time
                 corr_weight_sum = cage_correlations_summing(target_species_hit, transcript_id, cage_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
+##                print "corr_weight_sum", time.time() - calcs_start_time
                 
-            cpg_weight = cpg_weights_summing(transcript_id, target_species_hit, cpg_obsexp_weights_dict, cpg_list)
+            cpg_weight = cpg_weights_summing(transcript_id, target_species_hit, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, cpg_list)
+##            print "cpg_weight", time.time() - calcs_start_time
             
             experimental_weights = [species_weights_sum, cage_weights_sum, eqtls_weights_sum, atac_weights_sum, metacluster_weights_sum, cpg_weight, corr_weight_sum]
 ##            combined_affinity_score += sum(experimental_weights) + target_species_pwm_score_weight
             combined_affinity_score += sum(experimental_weights)+ target_species_pwm_score
             combined_affinity_score = round(combined_affinity_score, 3)
 
-            if combined_affinity_score > -1000:
-                hit.append(len(alignment))
-                hit.append(combined_affinity_score)
-            
-            # add the tfbs support (len cluster) to the target_species hit        
-                experimental_weights_rounded = [round(x, 3) for x in experimental_weights]
-                hit += experimental_weights_rounded
+##            if combined_affinity_score > -1000:
+            hit.append(len(alignment))
+            hit.append(combined_affinity_score)
+        
+        # add the tfbs support (len cluster) to the target_species hit        
+            experimental_weights_rounded = [round(x, 3) for x in experimental_weights]
+            hit += experimental_weights_rounded
 
-                if tf_name in cluster_dict:
-                    cluster_dict[tf_name].append([hit])
-                else:
-                    cluster_dict[tf_name] = [[hit]]
+            if tf_name in cluster_dict:
+                cluster_dict[tf_name].append([hit])
+            else:
+                cluster_dict[tf_name] = [[hit]]
 
     return cluster_dict
 
@@ -1165,7 +1175,7 @@ def metacluster_weights_summing(transcript_id, target_species_hit, metacluster_o
     return metacluster_weights_sum
 
 
-def cpg_weights_summing(transcript_id, target_species_hit, cpg_obsexp_weights_dict, cpg_list):
+def cpg_weights_summing(transcript_id, target_species_hit, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, cpg_list):
     """
     Retrieve a CpG weight score based on the CpG obs/exp of the midpoint of the
     current predicted TFBS.
@@ -1179,8 +1189,7 @@ def cpg_weights_summing(transcript_id, target_species_hit, cpg_obsexp_weights_di
     cpg_obsexp = cpg_list[motif_midpoint][-1]
 
     # extract the weight for the obsexp which is just less than the current obsexp
-    cpg_obsexp_weights_dict_keys = cpg_obsexp_weights_dict.keys()
-    cpg_obsexp_weights_dict_keys.sort()
+
     next_lesser_obsexp_index = bisect_left(cpg_obsexp_weights_dict_keys, cpg_obsexp)
     next_lesser_obsexp = cpg_obsexp_weights_dict_keys[next_lesser_obsexp_index]
     cpg_weight = cpg_obsexp_weights_dict[next_lesser_obsexp]
@@ -1290,8 +1299,12 @@ def sort_target_species_hits(cluster_dict):
         
 
     # ref-point
+##    timing_start = time.time()
     sorted_clusters_target_species_hits_list = sorted(sorted_clusters_target_species_hits_list, key=itemgetter(12), reverse = True)
-
+##    sorted_clusters_target_species_hits_list.sort(key=lamda x: x[12], reverse = True)
+##    timing_end = time.time()
+##    print "timing for sort at position 12", timing_end - timing_start
+    
     return sorted_clusters_target_species_hits_dict, sorted_clusters_target_species_hits_list
 
 
@@ -1796,7 +1809,8 @@ def gtrd_positions_translate(target_dir, gtrd_metaclusters_dict, chromosome, str
 
     potential_metaclusters_in_promoter = []
     
-    chromosome = "chr" + chromosome
+##    chromosome = "chr" + chromosome
+    
     if chromosome in gtrd_metaclusters_dict:
         promoter_start_millions = promoter_start/1000000
         promoter_end_millions = promoter_end/1000000
@@ -1962,20 +1976,23 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
     y_range = []
     labels_used = []
 
-    # Set y-axis height based on number of entries in alignment
-    tens_y = len(alignment)/10 + 1
+
 
     # Create a list sorted descending by number of supporting sequences, so that lower support hits that overlap can be seen.
-    sorted_by_support_list = []
+##    sorted_by_support_list = []
+    sorted_by_ca_list = []
     for TF, great_hits in top_x_greatest_hits_dict.iteritems():
         for great_hit in great_hits:
-            sorted_by_support_list.append(great_hit)
+            sorted_by_ca_list.append(great_hit)
+##            sorted_by_support_list.append(great_hit)
 
     # ref-point
-    sorted_by_support_list = sorted(sorted_by_support_list, key=itemgetter(11), reverse=True)
-
+##    sorted_by_support_list = sorted(sorted_by_support_list, key=itemgetter(11), reverse=True)
+    sorted_by_ca_list = sorted(sorted_by_ca_list, key=itemgetter(12), reverse=True)
+    
     # Choose color and plot TFs
-    for sorted_great_hit in sorted_by_support_list:
+##    for sorted_great_hit in sorted_by_support_list:
+    for sorted_great_hit in sorted_by_ca_list:
         tf_name = sorted_great_hit[0]
 
         # choose a unique color for each tf_name
@@ -2001,15 +2018,23 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
         # ref-point
         binding_site_start = sorted_great_hit[6]
         binding_site_end = sorted_great_hit[7]
-        binding_support = sorted_great_hit[11]
+##        binding_support = sorted_great_hit[11]
+        combined_affinity = sorted_great_hit[12]
         binding_strand = int(sorted_great_hit[3])
 
         TF_center_point = float(binding_site_start + binding_site_end)/2
         TF_width = abs(binding_site_start - binding_site_end)
         x_series.append(TF_center_point)
-        y_series.append(binding_support * binding_strand)
-        y_range.append(binding_support)                    
+##        y_series.append(binding_support * binding_strand)
+##        y_range.append(binding_support)                    
+        y_series.append(combined_affinity * binding_strand)
+        y_range.append(combined_affinity)
         ax1.bar(x_series, y_series, facecolor = picked_color, edgecolor = edge_color, linewidth=1, alpha=0.9, align = 'center', width = TF_width, label = lab)
+
+    # Set y-axis height based on number of entries in alignment
+    y_range.sort()
+##    tens_y = len(alignment)/10 + 1
+    tens_y = int(y_range[-1])/10 + 1
 
     # Plot bars for Ensembl regulatory information
     # All will be horizontally plotted in some shade of red
@@ -2112,7 +2137,6 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
     # eQTLs plot
     magnitudes = []
     for converted_eqtl in converted_eqtls:
-    
         converted_eqtl_start, converted_eqtl_end, converted_eqtl_mag = converted_eqtl
         if -1 * promoter_before_tss <= converted_eqtl_start <= promoter_after_tss + 1 or -1 * promoter_before_tss <= converted_eqtl_end <= promoter_after_tss + 1:
             eqtl_midpoint = float(converted_eqtl_start + converted_eqtl_end)/2
@@ -2124,10 +2148,7 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
             magnitudes.append(converted_eqtl_mag)
             ax4.bar(eqtl_x_series, eqtl_y_series, facecolor='black', edgecolor='black', align = 'center', width=eqtl_width)        
 
-    # ax1 predicted TFBSs
-    num_cols = 6
-    ax1.legend(bbox_to_anchor=[0., 1.05, 1.0, .102], loc='center', ncol=num_cols, prop={'size':9}, mode="expand", borderaxespad=0.)
-    ax1.axhline(0, color = 'black')
+
 
     # plot title
     title_str = " ".join([transcript_name, transcript_id])
@@ -2146,13 +2167,14 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
     # plt + ax labels
     plt.xlabel("Nucleotide position before TSS", labelpad=5)
     ax1.text(1.02,.5,'Predicted TFBSs', verticalalignment='center', transform=ax1.transAxes, rotation='vertical', fontsize=8)
-    ax1.set_ylabel("Number of supporting motifs", fontsize = 10, labelpad = 0)
-    ax2.text(1.02,.5,'Conservation', verticalalignment='center', transform=ax2.transAxes, rotation='vertical', fontsize=8)
-    ax3.text(1.02,.5,'CpG\nObs/Exp', verticalalignment='center', transform=ax3.transAxes, rotation='vertical', fontsize=8)
-    ax4.text(1.02,.5,'eQTLs', verticalalignment='center', transform=ax4.transAxes, rotation='vertical', fontsize=8)
-    ax5.text(1.02,.5,'GTRD\nMeta\nClusters', verticalalignment='center', transform=ax5.transAxes, rotation='vertical', fontsize=8)
-    ax6.text(1.02,.5,'ATAC-Seq', verticalalignment='center', transform=ax6.transAxes, rotation='vertical', fontsize=8)
-    ax7.text(1.02,.5,'CAGE\nPeaks', verticalalignment='center', transform=ax7.transAxes, rotation='vertical', fontsize=8)
+##    ax1.set_ylabel("Number of supporting motifs", fontsize = 10, labelpad = 0)
+    ax1.set_ylabel("Combined Affinity Score", fontsize = 8, labelpad = 0)
+    ax2.text(1.02,.5,'Conservation', verticalalignment='center', transform=ax2.transAxes, rotation='vertical', fontsize=6)
+    ax3.text(1.02,.5,'CpG\nObs/Exp', verticalalignment='center', transform=ax3.transAxes, rotation='vertical', fontsize=6)
+    ax4.text(1.02,.5,'eQTLs', verticalalignment='center', transform=ax4.transAxes, rotation='vertical', fontsize=6)
+    ax5.text(1.02,.5,'GTRD\nMeta\nClusters', verticalalignment='center', transform=ax5.transAxes, rotation='vertical', fontsize=6)
+    ax6.text(1.02,.5,'ATAC-Seq', verticalalignment='center', transform=ax6.transAxes, rotation='vertical', fontsize=6)
+    ax7.text(1.02,.5,'CAGE\nPeaks', verticalalignment='center', transform=ax7.transAxes, rotation='vertical', fontsize=6)
 
     ## set ticks
     # ax1-predicted TFBSs
@@ -2169,8 +2191,11 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
     plt.setp(ax3.get_yticklabels(), fontsize=6)
 
     # ax4-eQTL
-    magnitudes.sort()
-    ax4_yticks = [math.floor(magnitudes[0]), 0, math.ceil(magnitudes[-1])]
+    ax4_yticks = [-1,0,1]
+    if len(magnitudes) > 0:
+        magnitudes.sort()
+        ax4_yticks = [math.floor(magnitudes[0]), 0, math.ceil(magnitudes[-1])]
+    
     ax4.set_yticks(ax4_yticks)
     ax4.set_yticklabels(ax4_yticks, va='center')
     plt.setp(ax4.get_yticklabels(), fontsize=6)
@@ -2179,6 +2204,11 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
     ax3.axhline(0.6, color = 'black', alpha = 0.4)
     ax4.axhline(0.0, color = 'black', alpha = 0.4)
     plt.xlim([-1 * promoter_before_tss, promoter_after_tss + 1])
+
+    # ax1 predicted TFBSs
+    num_cols = 6
+    ax1.legend(bbox_to_anchor=[0., 1.05, 1.0, .102], loc='center', ncol=num_cols, prop={'size':9}, mode="expand", borderaxespad=0.)
+    ax1.axhline(0, color = 'black')
     
     # produce .svg figure
     plt.subplots_adjust(hspace=0.40)
@@ -2274,6 +2304,8 @@ def main():
     cpg_obsexp_weights_dict_filename = os.path.join(script_dir, 'data/cpg_obsexp_weights.json')
     cpg_obsexp_weights_dict = load_json(cpg_obsexp_weights_dict_filename)
     cpg_obsexp_weights_dict = {float(k):float(v) for k,v in cpg_obsexp_weights_dict.iteritems()}
+    cpg_obsexp_weights_dict_keys = cpg_obsexp_weights_dict.keys()
+    cpg_obsexp_weights_dict_keys.sort()
 
     # load GTEx variants
     gtex_variants_filename = os.path.join(script_dir, 'data/gtex_reduced.loc_effect.uniques.grch38.msg')
@@ -2369,7 +2401,7 @@ def main():
             
                 # sort through scores, identify hits in target_species supported in other species
 ##                cluster_dict = find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_dist_weights_dict, cpg_list, cpg_obsexp_weights_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
-                cluster_dict = find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
+                cluster_dict = find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
                 
                 # write cluster entries to .csv
                 cluster_table_writer(cluster_dict, target_dir, ".clusters.", locality_threshold)
@@ -2388,4 +2420,4 @@ def main():
 
         logging.info("\n")
     total_time_end = time.time()
-##    logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "total time for", str(len(args_lists)), "transcripts:", str(total_time_end - total_time_start), "seconds"]) + "\n\n")
+    logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "total time for", str(len(args_lists)), "transcripts:", str(total_time_end - total_time_start), "seconds"]) + "\n\n")
