@@ -7,6 +7,8 @@ __version__ = "1.0.0b25"
 # Libraries ####################################################################
 import sys
 import signal
+import wget
+import tarfile
 import argparse
 import textwrap
 import os
@@ -131,6 +133,7 @@ def get_args():
                         help=" ".join(['[default:', os.path.join(curdir, "tfbs_results"), '] - Full path of directory where result directories will be output.']))
     # for now pvalue refers to the PWM score, in the future it will need to relate to the combined affinity score
     parser.add_argument('--pval', '-p', type=float, default=0.01, help='P-value (float) for determine score cutoff (range: 0.1 to 0.0000001) [default: 0.001]')
+    parser.add_argument('--exp_data_update', '-update', action="store_true", help='Download the latest experimental data files for use in analysis.')
 
     # Functionality to add later
     ##parser.add_argument('--noclean', '-nc', action = 'store_true', help='Optional: Don't clean retrieved alignment. Off by default.')
@@ -241,6 +244,7 @@ def get_args():
         top_x_tfs_count = args.top_x_tfs
         output_dir = args.output_dir
         pval = args.pval
+        exp_data_update = args.exp_data_update
         
         transcript_ids_list = parse_transcript_ids(transcript_ids_filename)
         for transcript_id in transcript_ids_list:
@@ -252,7 +256,7 @@ def get_args():
 
     
 
-    return args_lists
+    return args_lists, exp_data_update
 
 
 ################################################################################
@@ -283,7 +287,7 @@ def load_msgpack(object_filename):
 
     if os.path.exists(object_filename):
         with open(object_filename, 'r') as object_file:
-            return msgpack.unpack(object_file)
+            return msgpack.unpack(object_file, use_list=False)
 
 
 def save_msgpack(msgpack_obj, msgpack_filename):
@@ -407,6 +411,90 @@ def compare_tfs_list_jaspar(target_tfs_list, TFBS_matrix_dict):
         logging.warning(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "the following tf ids are not in the Jaspar database:", ", ".join(erroneous)]))
 
     return target_tfs_list
+
+
+def experimentalDataUpdater():
+    """
+    Update the experimental data by downloading it from the Amazon repository.
+    Only activates if the user specifically calls for an update, or the data directory does not exist.
+    """
+
+    if not os.path.exists(experimental_data_dir):
+        directory_creator(experimental_data_dir)
+        exp_data_update = True
+        print "data dir doesn't exist"
+    
+    if exp_data_update:
+        current_version_url = "https://s3.us-east-2.amazonaws.com/tfbssexperimentaldata/experimental_data.current_versions.json"
+        experimental_data_url = "https://s3.us-east-2.amazonaws.com/tfbssexperimentaldata/data.tar.gz"
+        experimental_data_down_loc = os.path.join(script_dir,'data.tar.gz')
+##        current_versions_file = os.path.join(experimental_data_dir, "experimental_data.current_versions.json")
+        print "Downloading the most current experimental data"
+        logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "Downloading most current experimental data."]))
+        wget.download(current_version_url, out=experimental_data_dir)
+        wget.download(experimental_data_url, out=experimental_data_down_loc)
+        tar = tarfile.open(experimental_data_down_loc)
+        tar.extractall(experimental_data_dir)
+
+
+def experimentalDataUpdater_beta():
+    """
+    Update the experimental data by downloading it from the Amazon repository.
+    Using a file which contains an dictionary of the most up to date exp. data filenames,
+    activates if data directory does not exist, if the data directory does not contain the most recent files,
+    or if it has been >= 60 days since last update.
+    This version of the updater is perhaps too error prone for this stage of development.
+    """
+    
+    ## download experimental data if not already present or if it is outdated
+    current_version_url = "https://s3.us-east-2.amazonaws.com/tfbssexperimentaldata/experimental_data.current_versions.json"
+    experimental_data_url = "https://s3.us-east-2.amazonaws.com/tfbssexperimentaldata/data.tar.gz"
+    experimental_data_down_loc = os.path.join(script_dir,'data.tar.gz')
+    experimental_data_dir = os.path.join(script_dir, 'data')
+    current_versions_file = os.path.join(experimental_data_dir, "experimental_data.current_versions.json")
+    update_required = False
+    
+    if not os.path.exists(experimental_data_dir):
+        directory_creator(experimental_data_dir)
+        update_required = True
+    else:
+        if os.path.exists(current_versions_file):
+            # check if all current versions are in the data dir
+            current_versions = load_json(current_versions_file)
+            current_versions_filenames = current_versions.values()
+            owned_versions_filenames = os.listdir(experimental_data_dir)
+            missing_files = [x for x in current_versions_filenames if x not in owned_versions_filenames]
+            if len(missing_files) > 0:
+                update_required = True
+
+            # check if 60 days has passed since last check of versions
+            if 'last_checked' in current_versions:
+                current_versions_last_checked = current_versions['last_checked']
+                if (time.time() - current_versions_last_checked)/(3600*24) >= 60:
+                    update_required = True
+        else:
+            update_required = True
+
+    # download the most current experimental data
+    if update_required:
+        print "Downloading the most current experimental data"
+        logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "Downloading most current experimental data."]))
+##        try:
+        wget.download(current_version_url, out=experimental_data_dir)
+        wget.download(experimental_data_url, out=experimental_data_down_loc)
+        tar = tarfile.open(experimental_data_down_loc)
+        tar.extractall(experimental_data_dir)
+
+##        except:
+##            logging.warning(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "Error in downloading experimental data.  Check your internet connection."]))
+
+##        os.remove(experimental_data_down_loc)
+        
+    # update the current versions file last checked time with current time 
+    if os.path.exists(current_versions_file):
+        current_versions = load_json(current_versions_file)
+        current_versions['last_checked'] = time.time()
+        dump_json(current_versions_file, current_versions)
 
 
 def overlap_range(x,y):
@@ -1906,7 +1994,8 @@ def atac_pos_translate(atac_seq_dict, chromosome, promoter_start, promoter_end, 
     for potential_atac_seq in potential_atac_seqs_in_promoter:
         
         atac_seq_start = potential_atac_seq[0]
-        atac_seq_end = potential_atac_seq[1]
+        atac_seq_end = potential_atac_seq[0] + potential_atac_seq[1]
+##        atac_seq_end = potential_atac_seq[1]
         atac_seq_score = potential_atac_seq[2]
         
         if (atac_seq_start >= promoter_start and atac_seq_start <= promoter_end) or \
@@ -2242,12 +2331,25 @@ def main():
     print("Executing tfbs_footprinter version %s." % __version__)
     
 ##    args, transcript_ids_filename, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir = get_args()
-    args_lists = get_args()
+    args_lists, exp_data_update = get_args()
+
+    # if experimental data dir does not exist or user has requested an exp data update, then update
+    experimental_data_dir = os.path.join(script_dir, 'data')
+    experimentalDataUpdater()
+
+        
+        
+
+
+    
 
     # analysis variables
     # dictionary of thresholds for each TF
-##    pwm_score_threshold_dict_filename = os.path.join(script_dir, 'data/all_tfs_thresholds.001.json')
     pwm_score_threshold_dict_filename = os.path.join(script_dir, 'data/all_tfs_thresholds.jaspar_2018.1.json')
+
+##    # updated version, which requires the presence of a current versions file
+##    pwm_score_threshold_dict_filename = os.path.join(experimental_data_dir, current_versions["jaspar_thresholds"])
+
     pwm_score_threshold_dicta = load_json(pwm_score_threshold_dict_filename)
     pwm_score_threshold_dict = {}
     for k,v in pwm_score_threshold_dicta.iteritems():
@@ -2309,6 +2411,7 @@ def main():
 
     # load GTEx variants
     gtex_variants_filename = os.path.join(script_dir, 'data/gtex_reduced.loc_effect.uniques.grch38.msg')
+    gtex_variants_filename = os.path.join(script_dir, 'data/gtex_reduced.loc_effect.uniques.tupled.grch38.msg')
     gtex_variants = load_msgpack(gtex_variants_filename)
 
     # load GTEx weights
@@ -2317,11 +2420,13 @@ def main():
     gtex_weights_dict = {float(k):float(v) for k,v in gtex_weights_dict.iteritems()}
 
     # load human meta clusters from GTRD project
-    gtrd_metaclusters_dict_filename = os.path.join(script_dir, 'data/human_meta_clusters.interval.clipped.msg')
+##    gtrd_metaclusters_dict_filename = os.path.join(script_dir, 'data/human_meta_clusters.interval.clipped.msg')
+    gtrd_metaclusters_dict_filename = os.path.join(script_dir, 'data/human_meta_clusters.interval.-chr.clipped.ordered.tupled.msg')
     gtrd_metaclusters_dict = load_msgpack(gtrd_metaclusters_dict_filename)
 
     # load human ATAC-Seq from Encode project
-    atac_seq_dict_filename = os.path.join(script_dir, 'data/atac-seq.combined.merged.msg')
+##    atac_seq_dict_filename = os.path.join(script_dir, 'data/atac-seq.combined.merged.msg')
+    atac_seq_dict_filename = os.path.join(script_dir, 'data/atac-seq.combined.merged.reduced.tupled.msg')
     atac_seq_dict = load_msgpack(atac_seq_dict_filename)
 
 ##    print "All files loaded"
