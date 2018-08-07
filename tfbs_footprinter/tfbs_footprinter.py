@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Python vers. 2.7.0 ###########################################################
-__version__ = "1.0.0b25"
+__version__ = "1.0.0b31"
 
 
 # Libraries ####################################################################
@@ -78,11 +78,16 @@ def get_args():
 
             ------------------------------------------------------------------------------------------------------
             Example Usage:
+            
                 simplest:
                 tfbs_footprinter PATH_TO/sample_ids.txt
 
                 all arguments:
-                tfbs_footprinter PATH_TO/sample_ids.txt -tfs PATH_TO/tf_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -l 5 -c 2 -tx 10 -o PATH_TO/Results/
+                tfbs_footprinter PATH_TO/sample_ids.txt -tfs PATH_TO/tf_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -tx 10 -o PATH_TO/Results/
+
+                run the sample analysis:
+                Option #1: tfbs_footprinter PATH_TO/sample_analysis/sample_analysis_list.tsv
+                Option #2: tfbs_footprinter PATH_TO/sample_analysis/sample_ensembl_ids.txt
             ------------------------------------------------------------------------------------------------------
             """))
 
@@ -123,17 +128,17 @@ def get_args():
                         help='(0-100,000) [default: 900] - Number (integer) of nucleotides upstream of TSS to include in analysis (0-100,000).')
     parser.add_argument('--promoter_after_tss', '-pa', metavar='', choices = range(-10000, 100001), type=int, default=100,
                         help='(0-100,000) [default: 100] - Number (integer) of nucleotides downstream of TSS to include in analysis.')
-    parser.add_argument('--locality_threshold', '-l', metavar='', choices = range(0, 101), type=int, default=5,
-                        help='(0-100) [default: 5] - Nucleotide distance (integer) upstream/downstream within which TF predictions in other species will be included to support a hit in the target species.')
-    parser.add_argument('--conservation_min', '-c', metavar='', type=int, default=1,
-                        help='(1-20)[default: 2] - Minimum number (integer) of species a predicted TF is found in, in alignment, to be considered conserved .')
+##    parser.add_argument('--locality_threshold', '-l', metavar='', choices = range(0, 101), type=int, default=5,
+##                        help='(0-100) [default: 5] - Nucleotide distance (integer) upstream/downstream within which TF predictions in other species will be included to support a hit in the target species.')
+##    parser.add_argument('--conservation_min', '-c', metavar='', type=int, default=1,
+##                        help='(1-20)[default: 2] - Minimum number (integer) of species a predicted TF is found in, in alignment, to be considered conserved .')
     parser.add_argument('--top_x_tfs', '-tx', metavar='', choices = range(1, 21), type=int, default=10,
                         help='(1-20) [default: 10] - Number (integer) of unique TFs to include in output .svg figure.')
     parser.add_argument('--output_dir', '-o', metavar='', type=str, default=os.path.join(curdir, "tfbs_results"),
-                        help=" ".join(['[default:', os.path.join(curdir, "tfbs_results"), '] - Full path of directory where result directories will be output.']))
+                        help=" ".join(['[default:', os.path.join(curdir, "tfbs_results"), '] - Full path of directory where result directories will be output.  Make sure that the root directory already exists.']))
     # for now pvalue refers to the PWM score, in the future it will need to relate to the combined affinity score
-    parser.add_argument('--pval', '-p', type=float, default=0.01, help='P-value (float) for determine score cutoff (range: 0.1 to 0.0000001) [default: 0.001]')
-    parser.add_argument('--exp_data_update', '-update', action="store_true", help='Download the latest experimental data files for use in analysis.')
+    parser.add_argument('--pval', '-p', type=float, default=0.01, help='P-value (float) for determine score cutoff (range: 0.1 to 0.0000001) [default: 0.01]')
+    parser.add_argument('--exp_data_update', '-update', action="store_true", help='Download the latest experimental data files for use in analysis.  Will run automatically if the "data" directory does not already exist (e.g. first usage).')
 
     # Functionality to add later
     ##parser.add_argument('--noclean', '-nc', action = 'store_true', help='Optional: Don't clean retrieved alignment. Off by default.')
@@ -150,11 +155,13 @@ def get_args():
         parsed_arg_lines = file_to_datalist(transcript_ids_filename)[1:]
         
         for i, parsed_arg_line in enumerate(parsed_arg_lines):
-            if len(parsed_arg_line) < 11:
+            if len(parsed_arg_line) < 10:
                 print "Incomplete arguments in input file on line", i
                 
             else:
-                transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir = parsed_arg_line
+##                transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir, pval = parsed_arg_line
+##                transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, strand_length_threshold, top_x_tfs_count, output_dir, pval = parsed_arg_line
+                transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, output_dir, pval = parsed_arg_line
 
                 # transcript_id
                 transcript_id = transcript_id.upper()
@@ -193,19 +200,19 @@ def get_args():
                         print "Entered promoter after TSS", promoter_after_tss, "in line", i, "is not an integer.  Defaulting to 100."
                         promoter_after_tss = 100
 
-                    # locality_threshold
-                    try:
-                        locality_threshold = int(locality_threshold)
-                    except:
-                        print "Entered locality threshold", locality_threshold, "in line", i, "is not an integer.  Defaulting to 5."
-                        locality_threshold = 5
-
-                    # strand_length_threshold
-                    try:
-                        strand_length_threshold = int(strand_length_threshold)
-                    except:
-                        print "Entered conservation threshold", strand_length_threshold, "in line", i, "is not an integer.  Defaulting to 2."
-                        strand_length_threshold = 2
+##                    # locality_threshold
+##                    try:
+##                        locality_threshold = int(locality_threshold)
+##                    except:
+##                        print "Entered locality threshold", locality_threshold, "in line", i, "is not an integer.  Defaulting to 5."
+##                        locality_threshold = 5
+##
+##                    # strand_length_threshold
+##                    try:
+##                        strand_length_threshold = int(strand_length_threshold)
+##                    except:
+##                        print "Entered conservation threshold", strand_length_threshold, "in line", i, "is not an integer.  Defaulting to 2."
+##                        strand_length_threshold = 2
 
                     # top_x_tfs_count
                     try:
@@ -216,17 +223,22 @@ def get_args():
 
                     # output dir
                     if output_dir == "":
-                        print "No output directory specified in line", i, ".  Defaulting to", os.path.join(curdir, "tfbs_results")
+                        print "No output directory specified in line", i, ". Defaulting to", os.path.join(curdir, "tfbs_results")
+                        output_dir = os.path.join(curdir, "tfbs_results")
 
                     # p-value
                     try:
                         pval = float(pval)
                     except:
                         print "Entered p-value threshold", pval, "in line", i, "is not float.  Defaulting to 0.01."
-                        pval = 0.01
-                        
+                        pval = 0.001
 
-                    parsed_cleaned_arg_line = [transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir, pval]
+                    # update exp data
+                    exp_data_update = False
+                    
+##                    parsed_cleaned_arg_line = [transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir, pval]
+##                    parsed_cleaned_arg_line = [transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, strand_length_threshold, top_x_tfs_count, output_dir, pval]
+                    parsed_cleaned_arg_line = [transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, output_dir, pval]
                     args_lists.append([args, transcript_ids_filename] + parsed_cleaned_arg_line)
 
     else:
@@ -237,8 +249,8 @@ def get_args():
         species_group = args.species_group
         target_species = args.target_species
         coverage = args.coverage
-        locality_threshold = args.locality_threshold
-        strand_length_threshold = args.conservation_min
+##        locality_threshold = args.locality_threshold
+##        strand_length_threshold = args.conservation_min
         promoter_before_tss = args.promoter_before_tss
         promoter_after_tss = args.promoter_after_tss
         top_x_tfs_count = args.top_x_tfs
@@ -248,7 +260,9 @@ def get_args():
         
         transcript_ids_list = parse_transcript_ids(transcript_ids_filename)
         for transcript_id in transcript_ids_list:
-            args_list = [args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir, pval]
+##            args_list = [args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir, pval]
+##            args_list = [args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, strand_length_threshold, top_x_tfs_count, output_dir, pval]
+            args_list = [args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, output_dir, pval]
             args_lists.append(args_list)
 ##        args_lists = [[args, transcript_ids_filename, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count]]
 ##        args_lists = [[args, transcript_ids_filename, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir]]
@@ -413,16 +427,18 @@ def compare_tfs_list_jaspar(target_tfs_list, TFBS_matrix_dict):
     return target_tfs_list
 
 
-def experimentalDataUpdater():
+def experimentalDataUpdater(exp_data_update):
     """
     Update the experimental data by downloading it from the Amazon repository.
     Only activates if the user specifically calls for an update, or the data directory does not exist.
     """
 
+    experimental_data_dir = os.path.join(script_dir, 'data')
+
     if not os.path.exists(experimental_data_dir):
         directory_creator(experimental_data_dir)
         exp_data_update = True
-        print "data dir doesn't exist"
+        print "Data dir doesn't exist"
     
     if exp_data_update:
         current_version_url = "https://s3.us-east-2.amazonaws.com/tfbssexperimentaldata/experimental_data.current_versions.json"
@@ -886,9 +902,11 @@ def unaligned2aligned_indexes(cleaned_aligned_filename):
 
 
 ##def find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_dist_weights_dict, cpg_list, cpg_obsexp_weights_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):
-def find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):
+##def find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):
+##def find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):
+def find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):    
     """
-    For each target species hit, find all hits in other species within the locality_threshold.
+    For each target species hit:
     Identify the highest score for each species within the locality threshold.
     Create combined affinity score from the target species hit and those best scores from each species.
     If two target species hits are within the locality threshold from one another, choose the hit which has the highest combined affinity score.
@@ -1325,7 +1343,8 @@ def clean_jaspar_names(uncleaned_jaspar_ids):
     return names_list
 
 
-def cluster_table_writer(cluster_dict, target_dir, name, locality_threshold):
+##def cluster_table_writer(cluster_dict, target_dir, name, locality_threshold):
+def cluster_table_writer(cluster_dict, target_dir, name):    
     """
     Write results to table for target species hits and,
     non-target species hits which support them.
@@ -1349,7 +1368,8 @@ def cluster_table_writer(cluster_dict, target_dir, name, locality_threshold):
                 writerUS.writerow(spacer_row)
                               
 
-def target_species_hits_table_writer(sorted_clusters_target_species_hits_list, target_dir, name, locality_threshold):
+##def target_species_hits_table_writer(sorted_clusters_target_species_hits_list, target_dir, name, locality_threshold):
+def target_species_hits_table_writer(sorted_clusters_target_species_hits_list, target_dir, name):
     """
     Write results to table for only target species.
     """
@@ -1539,27 +1559,27 @@ def remove_duplicate_species(alignment, target_species):
     return non_duplicate_alignment
 
 
-def selective_alignment(alignment):
-    """
-    Remove sequences from the alignment if they have less then 75% of the nucleotides of the target_species sequence.
-    Work needed: identify scenarios where length of target sequence affects alignment and subsequent scoring.
-    """
-
-    target_species_entry = alignment[0]
-    target_species_seq_2nd_half = target_species_entry['seq'][len(target_species_entry['seq'])/2:]
-    target_species_seq_2nd_half = target_species_seq_2nd_half.replace("-","").replace("N","").replace(" ","").replace(".","")
-    target_species_seq_2nd_half_len = len(target_species_seq_2nd_half)
-
-    cleaned_alignment = []
-    if target_species_seq_2nd_half_len > 0:
-        for entry in alignment:
-            entry_seq_2nd_half = entry['seq'][len(entry['seq'])/2:]
-            entry_seq_2nd_half = entry_seq_2nd_half.replace("-","").replace("N","").replace(" ","").replace(".","")      
-            entry_seq_2nd_half_len = len(entry_seq_2nd_half)
-            if float(entry_seq_2nd_half_len)/target_species_seq_2nd_half_len >= 0.75:
-                cleaned_alignment.append(entry)
-
-    return cleaned_alignment
+##def selective_alignment(alignment):
+##    """
+##    Remove sequences from the alignment if they have less then 75% of the nucleotides of the target_species sequence.
+##    Work needed: identify scenarios where length of target sequence affects alignment and subsequent scoring.
+##    """
+##
+##    target_species_entry = alignment[0]
+##    target_species_seq_2nd_half = target_species_entry['seq'][len(target_species_entry['seq'])/2:]
+##    target_species_seq_2nd_half = target_species_seq_2nd_half.replace("-","").replace("N","").replace(" ","").replace(".","")
+##    target_species_seq_2nd_half_len = len(target_species_seq_2nd_half)
+##
+##    cleaned_alignment = []
+##    if target_species_seq_2nd_half_len > 0:
+##        for entry in alignment:
+##            entry_seq_2nd_half = entry['seq'][len(entry['seq'])/2:]
+##            entry_seq_2nd_half = entry_seq_2nd_half.replace("-","").replace("N","").replace(" ","").replace(".","")      
+##            entry_seq_2nd_half_len = len(entry_seq_2nd_half)
+##            if float(entry_seq_2nd_half_len)/target_species_seq_2nd_half_len >= 0.75:
+##                cleaned_alignment.append(entry)
+##
+##    return cleaned_alignment
 
 
 def load_genome_aligned(aligned_filename):    
@@ -1592,7 +1612,8 @@ def alignment_tools(ensembl_aligned_filename, cleaned_aligned_filename, species_
             alignment = load_genome_aligned(ensembl_aligned_filename)
             alignment = remove_non_ACGT(alignment)
             alignment = remove_duplicate_species(alignment, target_species)
-            alignment = selective_alignment(alignment)
+##            # analysis is now based on conservation around individual hits, so removing sequences based on completeness is wasteful
+##            alignment = selective_alignment(alignment)
             alignment = remove_gap_only(alignment)
             fasta_writer(alignment, cleaned_aligned_filename)
 
@@ -2148,7 +2169,7 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
             ax1.bar(reg_x_series, reg_y_series, facecolor='red', edgecolor='red', alpha=alpha_gradient, align = 'center', width=reg_width, label=description)
             alpha_gradient -= alpha_gradient_dict[len(converted_reg_dict)]
             reg_height += 0.5  
-                            
+
     # Conservation plot
     ax2.plot(range(-1 * alignment_len + promoter_after_tss, promoter_after_tss), conservation, color='0.55')
     
@@ -2224,6 +2245,7 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
     ax6.axes.get_yaxis().set_visible(False)
 
     # eQTLs plot
+    colors = ["green", "red"]
     magnitudes = []
     for converted_eqtl in converted_eqtls:
         converted_eqtl_start, converted_eqtl_end, converted_eqtl_mag = converted_eqtl
@@ -2235,8 +2257,13 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
             eqtl_x_series.append(eqtl_midpoint)
             eqtl_y_series.append(converted_eqtl_mag)
             magnitudes.append(converted_eqtl_mag)
-            ax4.bar(eqtl_x_series, eqtl_y_series, facecolor='black', edgecolor='black', align = 'center', width=eqtl_width)        
-
+            if converted_eqtl_mag > 0:
+                c = colors[0]
+            else:
+                c = colors[1]
+            ax4.bar(eqtl_x_series, eqtl_y_series, facecolor=c, edgecolor=c, align = 'center', width=eqtl_width)
+##            # arrow does not format properly, perhaps due to size.  y value starts not at 0, and arrow wraps over itself.
+##            ax4.arrow(eqtl_midpoint, 0, 0, converted_eqtl_mag, color=c, length_includes_head = True, lw=10, width=0.01)
 
 
     # plot title
@@ -2252,12 +2279,12 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
     plt.setp(ax5.get_xticklabels(), visible=False)
     plt.setp(ax6.get_xticklabels(), visible=False)
 
-
     # plt + ax labels
     plt.xlabel("Nucleotide position before TSS", labelpad=5)
     ax1.text(1.02,.5,'Predicted TFBSs', verticalalignment='center', transform=ax1.transAxes, rotation='vertical', fontsize=8)
-##    ax1.set_ylabel("Number of supporting motifs", fontsize = 10, labelpad = 0)
     ax1.set_ylabel("Combined Affinity Score", fontsize = 8, labelpad = 0)
+    ax1.text(1.005,0.99,'+ strand', verticalalignment='top', transform=ax1.transAxes, rotation='vertical', fontsize=6)
+    ax1.text(1.005,.01,'- strand', verticalalignment='bottom', transform=ax1.transAxes, rotation='vertical', fontsize=6)
     ax2.text(1.02,.5,'Conservation', verticalalignment='center', transform=ax2.transAxes, rotation='vertical', fontsize=6)
     ax3.text(1.02,.5,'CpG\nObs/Exp', verticalalignment='center', transform=ax3.transAxes, rotation='vertical', fontsize=6)
     ax4.text(1.02,.5,'eQTLs', verticalalignment='center', transform=ax4.transAxes, rotation='vertical', fontsize=6)
@@ -2267,8 +2294,21 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
 
     ## set ticks
     # ax1-predicted TFBSs
-    ax1.set_yticks(range(-1 * ((tens_y)*10), ((tens_y)*10)+1, 10))
+
+    # based on 100's
+    ax1.set_yticks(range(-1 * (((tens_y*10)/100)+1)*100, (((tens_y*10)/100)+2)*100, 100))
+    ylabs=ax1.get_yticks().tolist()
+    ylabs=[abs(x) for x in ylabs]
+    ax1.set_yticklabels(ylabs)
     plt.setp(ax1.get_yticklabels(), fontsize=8)
+
+##    # based on 10's
+##    ax1.set_yticks(range(-1 * ((tens_y)*10), ((tens_y)*10)+1, 10))
+##    plt.setp(ax1.get_yticklabels()[::(tens_y/10)+2], visible=False)
+##    if tens_y <=10:
+##        plt.setp(ax1.get_yticklabels()[::2], visible=False)
+##    else:
+##        plt.setp(ax1.get_yticklabels()[::tens_y/10], visible=False)
 
     # ax2-conservation
     ax2.set_yticks([0, 1])
@@ -2296,9 +2336,9 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
 
     # ax1 predicted TFBSs
     num_cols = 6
-    ax1.legend(bbox_to_anchor=[0., 1.05, 1.0, .102], loc='center', ncol=num_cols, prop={'size':9}, mode="expand", borderaxespad=0.)
+    ax1.legend(bbox_to_anchor=[0., 1.1, 1.0, .102], loc='center', ncol=num_cols, prop={'size':8}, mode="expand", borderaxespad=0.)
     ax1.axhline(0, color = 'black')
-    
+                      
     # produce .svg figure
     plt.subplots_adjust(hspace=0.40)
     fig.savefig(os.path.join(target_dir, os.path.basename(target_dir) + '.Promoterhisto'  + '.svg'), facecolor='white', bbox_inches='tight')
@@ -2333,15 +2373,9 @@ def main():
 ##    args, transcript_ids_filename, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir = get_args()
     args_lists, exp_data_update = get_args()
 
-    # if experimental data dir does not exist or user has requested an exp data update, then update
-    experimental_data_dir = os.path.join(script_dir, 'data')
-    experimentalDataUpdater()
-
-        
-        
-
-
+    # if experimental data dir does not exist or user has requested an exp data update, then update.
     
+    experimentalDataUpdater(exp_data_update)
 
     # analysis variables
     # dictionary of thresholds for each TF
@@ -2432,7 +2466,9 @@ def main():
 ##    print "All files loaded"
     
     for args_list in args_lists:
-        args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir, pval = args_list
+##        args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir, pval = args_list
+##        args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, strand_length_threshold, top_x_tfs_count, output_dir, pval = args_list
+        args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, output_dir, pval = args_list
 
         print transcript_id
 
@@ -2506,14 +2542,18 @@ def main():
             
                 # sort through scores, identify hits in target_species supported in other species
 ##                cluster_dict = find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_dist_weights_dict, cpg_list, cpg_obsexp_weights_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
-                cluster_dict = find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
+##                cluster_dict = find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, locality_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
+##                cluster_dict = find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, strand_length_threshold, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
+                cluster_dict = find_clusters(alignment, target_species, tfbss_found_dict, cleaned_aligned_filename, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
                 
-                # write cluster entries to .csv
-                cluster_table_writer(cluster_dict, target_dir, ".clusters.", locality_threshold)
+##                # write cluster entries to .csv\
+##                # no longer needed if not basing analysis on overall conservation vs clusters of high-scoring hits in multiple species
+##                cluster_table_writer(cluster_dict, target_dir, ".clusters.")
 
                 # sort the target_species hits supported by other species
                 sorted_clusters_target_species_hits_dict, sorted_clusters_target_species_hits_list = sort_target_species_hits(cluster_dict)
-                target_species_hits_table_writer(sorted_clusters_target_species_hits_list, target_dir, ".sortedclusters.", locality_threshold)
+##                target_species_hits_table_writer(sorted_clusters_target_species_hits_list, target_dir, ".sortedclusters.", locality_threshold)
+                target_species_hits_table_writer(sorted_clusters_target_species_hits_list, target_dir, ".sortedclusters.")
                 
                 # extract the top x target_species hits supported by other species
                 top_x_greatest_hits_dict = top_x_greatest_hits(sorted_clusters_target_species_hits_list, top_x_tfs_count)
