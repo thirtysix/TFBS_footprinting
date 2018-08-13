@@ -34,10 +34,6 @@ Predict TFBSs in the promoters any of 1-80,000 human protein coding transcripts.
 View the available Ensembl species groups to plan your analysis: https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json
 
 ### 3.1 Inputs
-- File of Jaspar TF IDs
-
-![sample_tf_ids](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_tf_ids.txt.png)
-
 - Option 1: CSV of arguments
 
 ![sample_csv](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_csv.png)
@@ -46,6 +42,9 @@ View the available Ensembl species groups to plan your analysis: https://rest.en
 
 ![sample_ids](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_ids.txt.png)
 
+- File of Jaspar TF IDs
+
+![sample_tf_ids](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_tf_ids.txt.png)
 
 
 ### 3.2 TFBS_footprinter Use Examples
