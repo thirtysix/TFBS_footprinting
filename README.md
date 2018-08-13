@@ -112,12 +112,12 @@ View the available Ensembl species groups to plan your analysis: https://rest.en
 -  --tf_ids_file , -tfs  Optional: Location of a file containing a limited list of Jaspar TFs to use in scoring alignment (see sample file tf_ids.txt at https://github.com/thirtysix/TFBS_footprinting)
     [default: all Jaspar TFs]
 -  --target_species , -s 
-    [default: "homo_sapiens"] - Target species (string), options are located at (https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#species). Conservation of TFs across other species will be based on identifying them in this species first.
+    [default: "homo_sapiens"] - Target species (string), options are located at (https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#6-species). Conservation of TFs across other species will be based on identifying them in this species first.
 -  --species_group , -g 
     ("mammals", "primates", "sauropsids", or "fish")
     [default: "mammals"] - Group of species (string) to identify conservation of TFs within. Your target species should be a member of this species group (e.g.
     "homo_sapiens" and "mammals" or "primates"). The
-    "primates" group does not have a low-coverage version. Groups and members are listed at (https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#species)
+    "primates" group does not have a low-coverage version. Groups and members are listed at (https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#6-species)
 -  --coverage , -e  ("low" or "high") [default: "low"] - Which Ensembl EPO alignment of species to use. The low coverage contains significantly more species and is recommended. The primate group does not have a low-coverage version.
 -  --promoter_before_tss , -pb 
     (0-100,000) [default: 900] - Number (integer) of nucleotides upstream of TSS to include in analysis
@@ -152,6 +152,7 @@ Iterate through each user provided Ensembl transcript id:
 
 ## 5 Output
 - Figure showing top_x_tfs highest scoring (combined affinity score) TFBSs mapped onto target_species promoter (ENSxxxxxxxxxxxx_[species_group].Promoterhisto.svg).
+![sample_csv](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_output_figure.png)
 - Original alignment as retrieved from Ensembl (alignment_uncleaned.fasta).
 - Cleaned alignment (alignment_cleaned.fasta).
 - Regulatory information for the target transcripts user-defined promoter region (regulatory_decoded.json).
