@@ -35,12 +35,15 @@ View the available Ensembl species groups to plan your analysis: https://rest.en
 
 ### 3.1 Inputs
 - File of Jaspar TF IDs
+
 ![sample_tf_ids](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_tf_ids.txt.png)
 
 - Option 1: CSV of arguments
+
 ![sample_csv](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_csv.png)
 
 - Option 2: Simple text-file of Ensembl Transcript IDs
+
 ![sample_ids](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_ids.txt.png)
 
 
