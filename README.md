@@ -42,7 +42,7 @@ View the available Ensembl species groups to plan your analysis: https://rest.en
 
 ![sample_ids](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_ids.txt.png)
 
-- File of Jaspar TF IDs
+- File of Jaspar TF IDs (Not required)
 
 ![sample_tf_ids](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_tf_ids.txt.png)
 
@@ -60,7 +60,7 @@ View the available Ensembl species groups to plan your analysis: https://rest.en
 #### Example using user-defined files/arguments
 - Run the sample analysis using a .txt of Ensembl transcript ids, and all arguments:
 
-	```$ tfbs_footprinter -t PATH_TO/sample_ensembl_ids.txt -tfs PATH_TO/tf_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -tx 10 -update```
+	```$ tfbs_footprinter -t PATH_TO/sample_analysis/sample_ensembl_ids.txt -tfs PATH_TO/sample_analysis/sample_jaspar_tf_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -tx 10 -update```
 
 #### Update the experimental data files
 
@@ -97,13 +97,13 @@ View the available Ensembl species groups to plan your analysis: https://rest.en
 	```$ cd ./analysis_dir```
 3. Then we can run the sample analysis in Docker in the same way that we would normally use tfbs_footprinter (above), e.g. using a .csv of arguments:
 
-	```$ tfbs_footprinter -t ./user_table_of_ensembl_ids_and_arguments.csv```
+	```$ tfbs_footprinter -t ./USER_TABLE_OF_ENSEMBL_IDS_AND_ARGS.csv```
 3. Or (again, as above) using a .txt of Ensembl transcript ids, and minimal arguments:
 
 	```$ tfbs_footprinter -t ./USER_LIST_OF_ENSEMBL_IDS.txt```
 - Or (again, as above) using a .txt of Ensembl transcript ids, and multiple arguments:
 
-	```$ tfbs_footprinter -t ./USER_LIST_OF_ENSEMBL_IDS.txt -tfs ./USER_LIST_OF_ENSEMBL_IDS.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -tx 10 -o PATH_TO/Results/ -update```
+	```$ tfbs_footprinter -t ./USER_LIST_OF_ENSEMBL_IDS.txt -tfs ./USER_LIST_OF_TF_NAMES.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -tx 10 -o PATH_TO/Results/ -update```
 
 
 ### 3.4 Arguments
@@ -112,12 +112,12 @@ View the available Ensembl species groups to plan your analysis: https://rest.en
 -  --tf_ids_file , -tfs  Optional: Location of a file containing a limited list of Jaspar TFs to use in scoring alignment (see sample file tf_ids.txt at https://github.com/thirtysix/TFBS_footprinting)
     [default: all Jaspar TFs]
 -  --target_species , -s 
-    [default: "homo_sapiens"] - Target species (string), options are located at (https://github.com/thirtysix/T FBS_footprinting/blob/master/README.md#species). Conservation of TFs across other species will be based on identifying them in this species first.
+    [default: "homo_sapiens"] - Target species (string), options are located at (https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#species). Conservation of TFs across other species will be based on identifying them in this species first.
 -  --species_group , -g 
     ("mammals", "primates", "sauropsids", or "fish")
     [default: "mammals"] - Group of species (string) to identify conservation of TFs within. Your target species should be a member of this species group (e.g.
     "homo_sapiens" and "mammals" or "primates"). The
-    "primates" group does not have a low-coverage version. Groups and members are listed at (https://github.com/t hirtysix/TFBS_footprinting/blob/master/README.md#speci es)
+    "primates" group does not have a low-coverage version. Groups and members are listed at (https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#species)
 -  --coverage , -e  ("low" or "high") [default: "low"] - Which Ensembl EPO alignment of species to use. The low coverage contains significantly more species and is recommended. The primate group does not have a low-coverage version.
 -  --promoter_before_tss , -pb 
     (0-100,000) [default: 900] - Number (integer) of nucleotides upstream of TSS to include in analysis
