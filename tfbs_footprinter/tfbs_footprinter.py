@@ -83,7 +83,7 @@ def get_args():
                 tfbs_footprinter PATH_TO/sample_ensembl_ids.txt
 
                 all arguments:
-                tfbs_footprinter -t PATH_TO/sample_ensembl_ids.txt -tfs PATH_TO/sample_jaspar_tf_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -tx 10 -o PATH_TO/Results/ -update
+                tfbs_footprinter -t PATH_TO/sample_ensembl_ids.txt -tfs PATH_TO/sample_jaspar_tf_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -tx 10 -update
 
                 run the sample analysis:
                 Option #1: tfbs_footprinter -t PATH_TO/sample_analysis/sample_analysis_list.csv
@@ -91,6 +91,8 @@ def get_args():
 
                 update the experimental data files (not needed often):
                 tfbs_footprinter -update
+
+                Results will be output to the current directory in a created directory named "tfbs_results"
             ------------------------------------------------------------------------------------------------------
             """))
 
@@ -140,8 +142,8 @@ def get_args():
     parser.add_argument('--top_x_tfs', '-tx', metavar='', choices = range(1, 21), type=int, default=10,
                         help='(1-20) [default: 10] - Number (integer) of unique TFs to include in output .svg figure.')
 
-    parser.add_argument('--output_dir', '-o', metavar='', type=str, default=os.path.join(curdir, "tfbs_results"),
-                        help=" ".join(['[default:', os.path.join(curdir, "tfbs_results"), '] - Full path of directory where result directories will be output.  Make sure that the root directory already exists.']))
+##    parser.add_argument('--output_dir', '-o', metavar='', type=str, default=os.path.join(curdir, "tfbs_results"),
+##                        help=" ".join(['[default:', os.path.join(curdir, "tfbs_results"), '] - Full path of directory where result directories will be output.  Make sure that the root directory already exists.']))
 
     # for now pvalue refers to the PWM score, in the future it will need to relate to the combined affinity score
     parser.add_argument('--pval', '-p', type=float, default=0.01, help='P-value (float) for determine score cutoff (range: 0.1 to 0.0000001) [default: 0.01]')
@@ -172,7 +174,8 @@ def get_args():
                     print "Incomplete arguments in input file on line", i
                     
                 else:
-                    transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, output_dir, pval = parsed_arg_line
+##                    transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, output_dir, pval = parsed_arg_line
+                    transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, pval = parsed_arg_line
 
                     # transcript_id
                     transcript_id = transcript_id.upper()
@@ -218,10 +221,10 @@ def get_args():
                             print "Entered top x tfs count", top_x_tfs_count, "in line", i, "is not an integer.  Defaulting to 10."
                             top_x_tfs_count = 10
 
-                        # output dir
-                        if output_dir == "":
-                            print ". ".join(["No output directory specified in line " + str(i), " ".join(["Defaulting to", os.path.join(curdir, "tfbs_results")])])
-                            output_dir = os.path.join(curdir, "tfbs_results")
+##                        # output dir
+##                        if output_dir == "":
+##                            print ". ".join(["No output directory specified in line " + str(i), " ".join(["Defaulting to", os.path.join(curdir, "tfbs_results")])])
+##                            output_dir = os.path.join(curdir, "tfbs_results")
 
                         # p-value
                         try:
@@ -233,9 +236,8 @@ def get_args():
                         # update exp data
                         exp_data_update = False
                         
-    ##                    parsed_cleaned_arg_line = [transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, locality_threshold, strand_length_threshold, top_x_tfs_count, output_dir, pval]
-    ##                    parsed_cleaned_arg_line = [transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, strand_length_threshold, top_x_tfs_count, output_dir, pval]
-                        parsed_cleaned_arg_line = [transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, output_dir, pval]
+##                        parsed_cleaned_arg_line = [transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, output_dir, pval]
+                        parsed_cleaned_arg_line = [transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, pval]
                         args_lists.append([args, transcript_ids_filename] + parsed_cleaned_arg_line)
 
         else:
@@ -249,14 +251,15 @@ def get_args():
             promoter_before_tss = args.promoter_before_tss
             promoter_after_tss = args.promoter_after_tss
             top_x_tfs_count = args.top_x_tfs
-            output_dir = args.output_dir
+##            output_dir = args.output_dir
             pval = args.pval
             exp_data_update = args.exp_data_update
             
             transcript_ids_list = parse_transcript_ids(transcript_ids_filename)
             for transcript_id in transcript_ids_list:
 
-                args_list = [args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, output_dir, pval]
+##                args_list = [args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, output_dir, pval]
+                args_list = [args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, pval]
                 args_lists.append(args_list)
 
     
@@ -2070,9 +2073,9 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
     ax2.text(1.02,.5,'Conservation', verticalalignment='center', transform=ax2.transAxes, rotation='vertical', fontsize=6)
     ax3.text(1.02,.5,'CpG\nObs/Exp', verticalalignment='center', transform=ax3.transAxes, rotation='vertical', fontsize=6)
     ax4.text(1.02,.5,'eQTLs', verticalalignment='center', transform=ax4.transAxes, rotation='vertical', fontsize=6)
-    ax5.text(1.02,.5,'GTRD\nMeta\nClusters', verticalalignment='center', transform=ax5.transAxes, rotation='vertical', fontsize=6)
+    ax5.text(1.02,.5,'TFBS\nMeta\nClusters', verticalalignment='center', transform=ax5.transAxes, rotation='vertical', fontsize=6)
     ax6.text(1.02,.5,'ATAC-Seq', verticalalignment='center', transform=ax6.transAxes, rotation='vertical', fontsize=6)
-    ax7.text(1.02,.5,'CAGE\nPeaks', verticalalignment='center', transform=ax7.transAxes, rotation='vertical', fontsize=6)
+    ax7.text(1.02,.5,'CAGE\nPeaks\n(TSSs)', verticalalignment='center', transform=ax7.transAxes, rotation='vertical', fontsize=6)
 
     ## set ticks
     # ax1-predicted TFBSs
@@ -2246,11 +2249,13 @@ def main():
         atac_seq_dict = load_msgpack(atac_seq_dict_filename)
     
     for args_list in args_lists:
-        args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, output_dir, pval = args_list
+##        args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, output_dir, pval = args_list
+        args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, pval = args_list
 
         print transcript_id
 
         # Create directory for results
+        output_dir = os.path.join(curdir, "tfbs_results")
         directory_creator(output_dir)
 
         # begin timing and logging
