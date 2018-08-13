@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Python vers. 2.7.0 ###########################################################
-__version__ = "1.0.0b36"
+__version__ = "1.0.0b38"
 
 
 # Libraries ####################################################################
@@ -170,7 +170,7 @@ def get_args():
             parsed_arg_lines = file_to_datalist(transcript_ids_filename)[1:]
             
             for i, parsed_arg_line in enumerate(parsed_arg_lines):
-                if len(parsed_arg_line) < 10:
+                if len(parsed_arg_line) < 9:
                     print "Incomplete arguments in input file on line", i
                     
                 else:

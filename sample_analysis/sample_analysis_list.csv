@@ -1,0 +1,9 @@
+ens_tid,target tfs filename,target species,species group,coverage,before TSS,after TSS,num tfs to plot,pval
+ENST00000426431,,homo_sapiens,mammals,low,900,100,10,0.01
+ENST00000426431,,homo_sapiens,mammals,low,2000,100,10,0.01
+ENST00000426431,,homo_sapiens,mammals,low,600,-100,10,0.01
+ENST00000426431,,homo_sapiens,mammals,low,900,100,10,0.01
+ENST00000426431,,homo_sapiens,mammals,low,900,100,10,0.001
+ENST00000426431,,homo_sapiens,mammals,high,900,100,10,0.01
+ENST00000426431,,homo_sapiens,primates,low,900,100,10,0.01
+ENST00000380152,,homo_sapiens,mammals,low,900,100,10,0.001
