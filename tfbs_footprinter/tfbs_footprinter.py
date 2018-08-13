@@ -761,8 +761,9 @@ def find_clusters(alignment, info_content_dict, target_species, tfbss_found_dict
     """
 
     cluster_dict = {}
-
-    for tf_name, hits in tfbss_found_dict.iteritems():
+    cage_correlations_hit_tf_dict = {}
+    
+    for tf_name, hits in tfbss_found_dict.iteritems():    
         for hit in hits:
             combined_affinity_score = 0
             target_species_hit = hit
@@ -780,7 +781,7 @@ def find_clusters(alignment, info_content_dict, target_species, tfbss_found_dict
                 eqtls_weights_sum = eqtls_weights_summing(target_species_hit, converted_eqtls, gtex_weights_dict)
                 atac_weights_sum = atac_weights_summing(transcript_id, target_species_hit, atac_dist_weights_dict, converted_atac_seqs_in_promoter)
                 metacluster_weights_sum = metacluster_weights_summing(transcript_id, target_species_hit, metacluster_overlap_weights_dict, converted_metaclusters_in_promoter)
-                corr_weight_sum = cage_correlations_summing(target_species_hit, transcript_id, cage_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
+                corr_weight_sum, cage_correlations_hit_tf_dict = cage_correlations_summing(target_species_hit, transcript_id, cage_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict, cage_correlations_hit_tf_dict)
 
             cpg_weight = cpg_weights_summing(transcript_id, target_species_hit, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, cpg_list)
 
@@ -801,7 +802,7 @@ def find_clusters(alignment, info_content_dict, target_species, tfbss_found_dict
             else:
                 cluster_dict[tf_name] = [[hit]]
 
-    return cluster_dict
+    return cluster_dict, cage_correlations_hit_tf_dict
 
 
 def alignment_info_content(aligned_filename):
@@ -967,7 +968,7 @@ def eqtls_weights_summing(target_species_hit, converted_eqtls, gtex_weights_dict
     return eqtl_weights_sum
 
 
-def cage_correlations_summing(target_species_hit, transcript_id, cage_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):
+def cage_correlations_summing(target_species_hit, transcript_id, cage_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict, cage_correlations_hit_tf_dict):
     """
     Extract correlation values between CAGEs associated with a predicted TFBS protein,
     and CAGEs associated with the current gene.
@@ -1003,7 +1004,6 @@ def cage_correlations_summing(target_species_hit, transcript_id, cage_dict, jasp
             tf_cage_key = cage_keys_dict[tf_cage]
             for target_cage_list in target_cages:
                 target_cage = target_cage_list[0]
-                
                 target_cage_key = cage_keys_dict[target_cage]
 
                 if tf_cage_key in cage_correlations_dict:
@@ -1013,14 +1013,22 @@ def cage_correlations_summing(target_species_hit, transcript_id, cage_dict, jasp
                         corr_weight_sum += cage_corr_weight
                         corr_weights_ls.append(cage_corr_weight)
 
+                        #
+                        if tf_name in cage_correlations_hit_tf_dict:
+                            cage_correlations_hit_tf_dict[tf_name].append(cage_correlation)
+                        else:
+                            cage_correlations_hit_tf_dict[tf_name] = [cage_correlation]
+
         else:
             print tf_cage
 
     if len(corr_weights_ls) > 0:
         corr_weights_ls.sort()
         corr_weight_sum = corr_weights_ls[-1]
+
+##    cage_correlations_hit_tf_dict[tf_name] = corr_weight_sum
     
-    return corr_weight_sum
+    return corr_weight_sum, cage_correlations_hit_tf_dict
            
 
 def cage_weights_summing(transcript_id, target_species_hit, cage_dist_weights_dict, cage_dict, converted_cages):
@@ -1859,21 +1867,35 @@ def atac_pos_translate(atac_seq_dict, chromosome, promoter_start, promoter_end, 
     return converted_atac_seqs_in_promoter
     
 
-def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, conservation, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls):
+def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, conservation, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, cage_correlations_hit_tf_dict):
     """
     Plot the predicted TFBSs, onto a 5000 nt promoter graph, which possess support above the current strand threshold.
     ['binding_prot', 'species', 'motif', 'strand', 'start', 'end', 'TSS-relative start', 'TSS-relative end', 'frame score', 'p-value', 'pos in align.', 'combined affinity score', 'support']
     """
 
     fig = plt.figure(figsize=(10, 6))
-    ax1 = plt.subplot2grid((18,1),(0,0), rowspan = 6, colspan = 11)
-    ax2 = plt.subplot2grid((18,1),(6,0), sharex=ax1, rowspan = 2, colspan = 11)
-    ax3 = plt.subplot2grid((18,1),(8,0), sharex=ax1, rowspan = 2, colspan = 11)
-    ax4 = plt.subplot2grid((18,1),(10,0), sharex=ax1, rowspan = 2, colspan = 11)
-    ax5 = plt.subplot2grid((18,1),(12,0), sharex=ax1, rowspan = 2, colspan = 11)
-    ax6 = plt.subplot2grid((18,1),(14,0), sharex=ax1, rowspan = 2, colspan = 11)
-    ax7 = plt.subplot2grid((18,1),(16,0), sharex=ax1, rowspan = 2, colspan = 11)
+    
+    ax1 = plt.subplot2grid((20,1),(0,0), rowspan = 6, colspan = 11)
+    ax8 = plt.subplot2grid((20,1),(6,0), rowspan = 2, colspan = 11)
+    ax2 = plt.subplot2grid((20,1),(8,0), sharex=ax1, rowspan = 2, colspan = 11)
+    ax3 = plt.subplot2grid((20,1),(10,0), sharex=ax1, rowspan = 2, colspan = 11)
+    ax4 = plt.subplot2grid((20,1),(12,0), sharex=ax1, rowspan = 2, colspan = 11)
+    ax5 = plt.subplot2grid((20,1),(14,0), sharex=ax1, rowspan = 2, colspan = 11)
+    ax6 = plt.subplot2grid((20,1),(16,0), sharex=ax1, rowspan = 2, colspan = 11)
+    ax7 = plt.subplot2grid((20,1),(18,0), sharex=ax1, rowspan = 2, colspan = 11)
+    
 
+##    fig = plt.figure(figsize=(10, 6))
+##    ax1 = plt.subplot2grid((18,1),(0,0), rowspan = 6, colspan = 11)
+##    ax2 = plt.subplot2grid((18,1),(6,0), sharex=ax1, rowspan = 2, colspan = 11)
+##    ax3 = plt.subplot2grid((18,1),(8,0), sharex=ax1, rowspan = 2, colspan = 11)
+##    ax4 = plt.subplot2grid((18,1),(10,0), sharex=ax1, rowspan = 2, colspan = 11)
+##    ax5 = plt.subplot2grid((18,1),(12,0), sharex=ax1, rowspan = 2, colspan = 11)
+##    ax6 = plt.subplot2grid((18,1),(14,0), sharex=ax1, rowspan = 2, colspan = 11)
+##    ax7 = plt.subplot2grid((18,1),(16,0), sharex=ax1, rowspan = 2, colspan = 11)
+
+
+    
     # Generate data for each of the greatest_hits and plot corresponding bar
     color_series=['#FFB300','#803E75','#FF6800','#A6BDD7','#C10020','#CEA262','#817066','#007D34','#F6768E','#00538A','#FF7A5C','#53377A','#FF8E00','#B32851','#F4C800','#7F180D','#93AA00','#593315','#F13A13','#232C16']
     color_dict = {'CTCF':'#FF0000', 'TBP':'#FF00FF'}
@@ -2051,6 +2073,23 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
 ##            # arrow does not format properly, perhaps due to size.  y value starts not at 0, and arrow wraps over itself.
 ##            ax4.arrow(eqtl_midpoint, 0, 0, converted_eqtl_mag, color=c, length_includes_head = True, lw=10, width=0.01)
 
+    # cage_correlations
+    # rebuild dict to have just the top correlation
+    for tf_name, correlations_list in cage_correlations_hit_tf_dict.iteritems():
+        correlations_list.sort()
+        cage_correlations_hit_tf_dict[tf_name] = correlations_list[-1]
+        
+    plot_tfs_corrs_colors = [(tf_name, cage_correlations_hit_tf_dict[tf_name], color) if tf_name in cage_correlations_hit_tf_dict else (tf_name, 0, color)for tf_name, color in color_dict.iteritems()]
+    plot_tfs_corrs_colors_sorted = sorted(plot_tfs_corrs_colors, key=itemgetter(1), reverse=True)
+    ax8.bar(range(0, len(plot_tfs_corrs_colors_sorted)), [x[1] for x in plot_tfs_corrs_colors_sorted], color=[x[2] for x in plot_tfs_corrs_colors_sorted], edgecolor = "none")
+    ax8.tick_params(
+    axis='x',          # changes apply to the x-axis
+    which='both',      # both major and minor ticks are affected
+    bottom=False,      # ticks along the bottom edge are off
+    top=False,         # ticks along the top edge are off
+    labelbottom=False)
+    ax8.set_ylim(0, 1) 
+
     # plot title
     title_str = " ".join([transcript_name, transcript_id])
     fig.text(0.065, 0.5, title_str, horizontalalignment='center', verticalalignment='center', transform=ax1.transAxes, rotation='vertical', fontsize=14)
@@ -2063,6 +2102,7 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
     plt.setp(ax4.get_xticklabels(), visible=False)
     plt.setp(ax5.get_xticklabels(), visible=False)
     plt.setp(ax6.get_xticklabels(), visible=False)
+    plt.setp(ax8.get_xticklabels(), visible=False)
 
     # plt + ax labels
     plt.xlabel("Nucleotide position before TSS", labelpad=5)
@@ -2070,12 +2110,13 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
     ax1.set_ylabel("Combined Affinity Score", fontsize = 8, labelpad = 0)
     ax1.text(1.005,0.99,'+ strand', verticalalignment='top', transform=ax1.transAxes, rotation='vertical', fontsize=6)
     ax1.text(1.005,.01,'- strand', verticalalignment='bottom', transform=ax1.transAxes, rotation='vertical', fontsize=6)
-    ax2.text(1.02,.5,'Conservation', verticalalignment='center', transform=ax2.transAxes, rotation='vertical', fontsize=6)
-    ax3.text(1.02,.5,'CpG\nObs/Exp', verticalalignment='center', transform=ax3.transAxes, rotation='vertical', fontsize=6)
-    ax4.text(1.02,.5,'eQTLs', verticalalignment='center', transform=ax4.transAxes, rotation='vertical', fontsize=6)
-    ax5.text(1.02,.5,'TFBS\nMeta\nClusters', verticalalignment='center', transform=ax5.transAxes, rotation='vertical', fontsize=6)
-    ax6.text(1.02,.5,'ATAC-Seq', verticalalignment='center', transform=ax6.transAxes, rotation='vertical', fontsize=6)
-    ax7.text(1.02,.5,'CAGE\nPeaks\n(TSSs)', verticalalignment='center', transform=ax7.transAxes, rotation='vertical', fontsize=6)
+    ax2.text(1.01,.5,'Conservation', verticalalignment='center', transform=ax2.transAxes, rotation='vertical', fontsize=6)
+    ax3.text(1.01,.5,'CpG\nObs/Exp', verticalalignment='center', transform=ax3.transAxes, rotation='vertical', fontsize=6)
+    ax4.text(1.01,.5,'eQTLs', verticalalignment='center', transform=ax4.transAxes, rotation='vertical', fontsize=6)
+    ax5.text(1.01,.5,'TFBS\nMeta\nClusters', verticalalignment='center', transform=ax5.transAxes, rotation='vertical', fontsize=6)
+    ax6.text(1.01,.5,'ATAC-Seq', verticalalignment='center', transform=ax6.transAxes, rotation='vertical', fontsize=6)
+    ax7.text(1.01,.5,'CAGE\nPeaks\n(TSSs)', verticalalignment='center', transform=ax7.transAxes, rotation='vertical', fontsize=6)
+    ax8.text(1.01,.5,'TF\nExpress.\nCorr.', verticalalignment='center', transform=ax8.transAxes, rotation='vertical', fontsize=6)
 
     ## set ticks
     # ax1-predicted TFBSs
@@ -2094,6 +2135,12 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
 ##        plt.setp(ax1.get_yticklabels()[::2], visible=False)
 ##    else:
 ##        plt.setp(ax1.get_yticklabels()[::tens_y/10], visible=False)
+
+    # ax8-CAGE correlation
+    ax8.set_yticks([0, 1])
+    plt.setp(ax8.get_yticklabels(), fontsize=6)
+##    ax8.set_yticklabels([0, 1], va='center')
+    
 
     # ax2-conservation
     ax2.set_yticks([0, 1])
@@ -2122,6 +2169,7 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
     # ax1 predicted TFBSs
     num_cols = 6
     ax1.legend(bbox_to_anchor=[0., 1.1, 1.0, .102], loc='center', ncol=num_cols, prop={'size':8}, mode="expand", borderaxespad=0.)
+##    ax8.legend(bbox_to_anchor=[0., 1.1, 1.0, .102], loc='center', ncol=num_cols, prop={'size':8}, mode="expand", borderaxespad=0.)
     ax1.axhline(0, color = 'black')
                       
     # produce .svg figure
@@ -2328,7 +2376,7 @@ def main():
                 
                 # sort through scores, identify hits in target_species supported in other species
                 local_start = time.time()
-                cluster_dict = find_clusters(alignment, info_content_dict, target_species, tfbss_found_dict, cleaned_aligned_filename, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
+                cluster_dict, cage_correlations_hit_tf_dict = find_clusters(alignment, info_content_dict, target_species, tfbss_found_dict, cleaned_aligned_filename, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
                 
                 tfbss_found_dict.clear()
                 
@@ -2345,7 +2393,7 @@ def main():
 
                 # plot the top x target_species hits
                 if len(top_x_greatest_hits_dict) > 0:
-                    plot_promoter(transcript_id,alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, conservation, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls)
+                    plot_promoter(transcript_id,alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, conservation, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, cage_correlations_hit_tf_dict)
 
         logging.info("\n")
     total_time_end = time.time()
