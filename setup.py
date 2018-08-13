@@ -27,7 +27,7 @@ version = re.search(
 
 
 # Get the long description from the README file
-with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
+with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
@@ -37,10 +37,11 @@ setup(
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
     # remove after debugging
-     version='1.0.0b23',
+    version='1.0.0b40',
 
     description='Tool for identifying conserved TFBSs in vertebrate species.',
     long_description=long_description,
+    long_description_content_type = 'text/markdown',
 
     # The project's main homepage.
     url='https://github.com/thirtysix/TFBS_footprinting',
@@ -91,7 +92,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['httplib2', 'numpy', 'matplotlib', 'biopython'],
+    install_requires=['httplib2', 'numpy', 'matplotlib', 'biopython', 'msgpack', 'wget'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
@@ -108,9 +109,8 @@ setup(
     # installed, specify them here.  If using Python 2.6 or less, then these
     # have to be included in MANIFEST.in as well.
     package_dir={'tfbs_footprinter': 'tfbs_footprinter'},
-    package_data={
-        "tfbs_footprinter": ['data/above_cutoff_scores_dict.10000000.0.001.json', 'data/pwms.json'],
-    },
+##    package_data={
+##        "tfbs_footprinter": ['data/above_cutoff_scores_dict.10000000.0.001.json', 'data/pwms.json']},
 
     # Although 'package_data' is the preferred approach, in some case you may
     # need to place data files outside of your packages. See:
