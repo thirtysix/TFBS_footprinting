@@ -37,6 +37,9 @@ View the available Ensembl species groups to plan your analysis: https://rest.en
 - File of Jaspar TF IDs
 ![tf_ids](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_tf_ids.txt.png)
 
+- File of Jaspar TF IDs
+![sample_tf_ids](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_tf_ids.txt.png)
+
 - Option 1: CSV of arguments
 ![sample_csv](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_csv.png)
 
