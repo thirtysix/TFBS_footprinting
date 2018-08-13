@@ -1014,10 +1014,10 @@ def cage_correlations_summing(target_species_hit, transcript_id, cage_dict, jasp
                         corr_weights_ls.append(cage_corr_weight)
 
                         #
-                        if tf_name in cage_correlations_hit_tf_dict:
-                            cage_correlations_hit_tf_dict[tf_name].append(cage_correlation)
-                        else:
-                            cage_correlations_hit_tf_dict[tf_name] = [cage_correlation]
+##                        if tf_name in cage_correlations_hit_tf_dict:
+##                            cage_correlations_hit_tf_dict[tf_name].append(cage_correlation)
+##                        else:
+##                            cage_correlations_hit_tf_dict[tf_name] = [cage_correlation]
 
         else:
             print tf_cage
@@ -1026,7 +1026,7 @@ def cage_correlations_summing(target_species_hit, transcript_id, cage_dict, jasp
         corr_weights_ls.sort()
         corr_weight_sum = corr_weights_ls[-1]
 
-##    cage_correlations_hit_tf_dict[tf_name] = corr_weight_sum
+    cage_correlations_hit_tf_dict[tf_name] = corr_weight_sum
     
     return corr_weight_sum, cage_correlations_hit_tf_dict
            
@@ -2073,22 +2073,20 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
 ##            # arrow does not format properly, perhaps due to size.  y value starts not at 0, and arrow wraps over itself.
 ##            ax4.arrow(eqtl_midpoint, 0, 0, converted_eqtl_mag, color=c, length_includes_head = True, lw=10, width=0.01)
 
+
     # cage_correlations
     # rebuild dict to have just the top correlation
-    for tf_name, correlations_list in cage_correlations_hit_tf_dict.iteritems():
-        correlations_list.sort()
-        cage_correlations_hit_tf_dict[tf_name] = correlations_list[-1]
-        
-    plot_tfs_corrs_colors = [(tf_name, cage_correlations_hit_tf_dict[tf_name], color) if tf_name in cage_correlations_hit_tf_dict else (tf_name, 0, color)for tf_name, color in color_dict.iteritems()]
+##    for tf_name, correlations_list in cage_correlations_hit_tf_dict.iteritems():
+##        correlations_list.sort()
+##        cage_correlations_hit_tf_dict[tf_name] = correlations_list[-1]
+
+    
+    plot_tfs_corrs_colors = [(tf_name, cage_correlations_hit_tf_dict[tf_name], color_dict[tf_name]) if tf_name in cage_correlations_hit_tf_dict else (tf_name, 0, color_dict[tf_name]) for tf_name in top_x_greatest_hits_dict]
     plot_tfs_corrs_colors_sorted = sorted(plot_tfs_corrs_colors, key=itemgetter(1), reverse=True)
     ax8.bar(range(0, len(plot_tfs_corrs_colors_sorted)), [x[1] for x in plot_tfs_corrs_colors_sorted], color=[x[2] for x in plot_tfs_corrs_colors_sorted], edgecolor = "none")
-    ax8.tick_params(
-    axis='x',          # changes apply to the x-axis
-    which='both',      # both major and minor ticks are affected
-    bottom=False,      # ticks along the bottom edge are off
-    top=False,         # ticks along the top edge are off
-    labelbottom=False)
-    ax8.set_ylim(0, 1) 
+    ax8.set_ylim(0, plot_tfs_corrs_colors_sorted[0][1]+1)
+    ax8.set_xlim(-0.1, len(plot_tfs_corrs_colors_sorted))
+
 
     # plot title
     title_str = " ".join([transcript_name, transcript_id])
@@ -2137,7 +2135,7 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
 ##        plt.setp(ax1.get_yticklabels()[::tens_y/10], visible=False)
 
     # ax8-CAGE correlation
-    ax8.set_yticks([0, 1])
+    ax8.set_yticks([0, math.ceil(plot_tfs_corrs_colors_sorted[0][1])+1])
     plt.setp(ax8.get_yticklabels(), fontsize=6)
 ##    ax8.set_yticklabels([0, 1], va='center')
     
