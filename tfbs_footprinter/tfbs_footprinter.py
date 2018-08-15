@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Python vers. 2.7.0 ###########################################################
-__version__ = "1.0.0b38"
+__version__ = "1.0.0b41"
 
 
 # Libraries ####################################################################
@@ -1883,7 +1883,7 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
     ax5 = plt.subplot2grid((20,1),(14,0), sharex=ax1, rowspan = 2, colspan = 11)
     ax6 = plt.subplot2grid((20,1),(16,0), sharex=ax1, rowspan = 2, colspan = 11)
     ax7 = plt.subplot2grid((20,1),(18,0), sharex=ax1, rowspan = 2, colspan = 11)
-    
+    mpl.rcParams['axes.linewidth'] = 1.1
 
 ##    fig = plt.figure(figsize=(10, 6))
 ##    ax1 = plt.subplot2grid((18,1),(0,0), rowspan = 6, colspan = 11)
@@ -1980,6 +1980,7 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
 
     # Conservation plot
     ax2.plot(range(-1 * alignment_len + promoter_after_tss, promoter_after_tss), conservation, color='0.55')
+    ax2.set_ylim(0, 1)
     
     # CpG plot
     # [1 C, 1 if G, 1 if CPG, CorG, num_cpg, obs2exp]
@@ -1999,6 +2000,9 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
                 gpc.append(top_obs2exp)
 
     ax3.bar(range(-1 * alignment_len + promoter_after_tss, promoter_after_tss), gpc, color = 'black')
+    if top_obs2exp <1:
+        top_obs2exp = 1
+    ax3.set_ylim(0, top_obs2exp)
    
     # CAGE plot
     cage_height = 1
@@ -2085,7 +2089,7 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
     plot_tfs_corrs_colors_sorted = sorted(plot_tfs_corrs_colors, key=itemgetter(1), reverse=True)
     ax8.bar(range(0, len(plot_tfs_corrs_colors_sorted)), [x[1] for x in plot_tfs_corrs_colors_sorted], color=[x[2] for x in plot_tfs_corrs_colors_sorted], edgecolor = "none")
     ax8.set_ylim(0, plot_tfs_corrs_colors_sorted[0][1]+1)
-    ax8.set_xlim(-0.1, len(plot_tfs_corrs_colors_sorted))
+    ax8.set_xlim(-1, len(top_x_greatest_hits_dict))
 
 
     # plot title
@@ -2118,7 +2122,6 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
 
     ## set ticks
     # ax1-predicted TFBSs
-
     # based on 100's
     ax1.set_yticks(range(-1 * (((tens_y*10)/100)+1)*100, (((tens_y*10)/100)+2)*100, 100))
     ylabs=ax1.get_yticks().tolist()
@@ -2164,11 +2167,12 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
     ax4.axhline(0.0, color = 'black', alpha = 0.4)
     plt.xlim([-1 * promoter_before_tss, promoter_after_tss + 1])
 
-    # ax1 predicted TFBSs
+    # legend
     num_cols = 6
-    ax1.legend(bbox_to_anchor=[0., 1.1, 1.0, .102], loc='center', ncol=num_cols, prop={'size':8}, mode="expand", borderaxespad=0.)
-##    ax8.legend(bbox_to_anchor=[0., 1.1, 1.0, .102], loc='center', ncol=num_cols, prop={'size':8}, mode="expand", borderaxespad=0.)
-    ax1.axhline(0, color = 'black')
+    legend = ax1.legend(bbox_to_anchor=[0., 1.1, 1.0, .102], loc='center', ncol=num_cols, prop={'size':8}, mode="expand", borderaxespad=0.)
+
+    # ax1 predicted TFBSs
+    ax1.axhline(0, color = 'black', linewidth=0.5)
                       
     # produce .svg figure
     plt.subplots_adjust(hspace=0.40)
