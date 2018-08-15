@@ -1,7 +1,6 @@
 ## TFBS_footprinting
 ![logo](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/tfbs_logo.png)
-* This work is a derivative of "Creative Commons 10th Birthday Celebration San Francisco" by kelvin13, used under <html = "https://creativecommons.org/licenses/by/3.0/">CC BY</html>. <html = "https://commons.wikimedia.org/wiki/File:Transcription_Factors.svg">"Transcription factors"</html> is licensed under <html = "https://creativecommons.org/licenses/by/3.0/">CC BY</html> by TFBSfootprinter.
-adapted from https://commons.wikimedia.org/wiki/User:Kelvin13
+* This work is a derivative of ["Transcription factors"](https://commons.wikimedia.org/wiki/File:Transcription_Factors.svg) by [kelvin13](https://commons.wikimedia.org/wiki/User:Kelvin13), used under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)
 * * *
 
 Pipeline: Identification of cis-regulatory elements by matrix scoring and conservation across groups of species (mammals, primates, sauropsids, fish) catalogued in the Ensembl database.
