@@ -1,5 +1,5 @@
 ## TFBS_footprinting
-![logo](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/tfbs_logo.svg)
+![logo](https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/tfbs_logo.png)
 * * *
 
 Pipeline: Identification of cis-regulatory elements by matrix scoring and conservation across groups of species (mammals, primates, sauropsids, fish) catalogued in the Ensembl database.
