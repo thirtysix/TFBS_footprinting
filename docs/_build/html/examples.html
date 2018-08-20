@@ -1,0 +1,211 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>5. Examples &mdash; tfbs_footprinting 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="tfbs_footprinting 1.0 documentation" href="index.html" />
+    <link rel="next" title="6. Arguments" href="arguments.html" />
+    <link rel="prev" title="4. Output" href="output.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="examples">
+<h1>5. Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="tfbs-footprinter-use-examples">
+<h2>5.1 TFBS_footprinter Use Examples<a class="headerlink" href="#tfbs-footprinter-use-examples" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="running-the-sample-analyses">
+<h3>Running the sample analyses<a class="headerlink" href="#running-the-sample-analyses" title="Permalink to this headline">¶</a></h3>
+<ul>
+<li><p class="first">Run the sample analysis using a .csv of arguments:</p>
+<blockquote>
+<div><p><code class="docutils literal"><span class="pre">$</span> <span class="pre">tfbs_footprinter</span> <span class="pre">-t</span> <span class="pre">PATH_TO/sample_analysis/sample_analysis_list.csv</span></code></p>
+</div></blockquote>
+</li>
+<li><p class="first">Run the sample analysis using a .txt of Ensembl transcript ids, and minimal arguments:</p>
+<blockquote>
+<div><p><code class="docutils literal"><span class="pre">$</span> <span class="pre">tfbs_footprinter</span> <span class="pre">-t</span> <span class="pre">PATH_TO/sample_analysis/sample_ensembl_ids.txt</span></code></p>
+</div></blockquote>
+</li>
+</ul>
+<p>Example using user-defined files/arguments
+- Run the sample analysis using a .txt of Ensembl transcript ids, and all arguments:</p>
+<blockquote>
+<div><code class="docutils literal"><span class="pre">$</span> <span class="pre">tfbs_footprinter</span> <span class="pre">-t</span> <span class="pre">PATH_TO/sample_analysis/sample_ensembl_ids.txt</span> <span class="pre">-tfs</span> <span class="pre">PATH_TO/sample_analysis/sample_jaspar_tf_ids.txt</span> <span class="pre">-s</span> <span class="pre">homo_sapiens</span> <span class="pre">-g</span> <span class="pre">mammals</span> <span class="pre">-e</span> <span class="pre">low</span> <span class="pre">-pb</span> <span class="pre">900</span> <span class="pre">-pa</span> <span class="pre">100</span> <span class="pre">-tx</span> <span class="pre">10</span> <span class="pre">-update</span></code></div></blockquote>
+<p>Update the experimental data files</p>
+<p><code class="docutils literal"><span class="pre">$</span> <span class="pre">tfbs_footprinter</span> <span class="pre">-update</span></code></p>
+</div>
+</div>
+<div class="section" id="tfbs-footprinter-use-examples-within-docker">
+<h2>5.2 TFBS_footprinter Use Examples <strong>Within Docker</strong><a class="headerlink" href="#tfbs-footprinter-use-examples-within-docker" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id1">
+<h3>Running the sample analyses<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic">
+<li><p class="first">Within Docker we first need to mount a volume so that the results of the analyis can be viewed on our host computer.  It is recommended that you create an empty directory on your host computer:</p>
+<blockquote>
+<div><p><code class="docutils literal"><span class="pre">$</span> <span class="pre">docker</span> <span class="pre">run</span> <span class="pre">-v</span> <span class="pre">/ABSOLUTE_PATH_TO/EMPTY_DIR_ON_HOST:/home/sample_analysis/tfbs_results</span> <span class="pre">-it</span> <span class="pre">tfbs_footprinting</span> <span class="pre">bash</span></code></p>
+</div></blockquote>
+</li>
+<li><p class="first">Then we move into the pre-existing sample analysis directory in the Docker container to perform the analysis there so that the results generated there will automatically appear in the designated location on our host computer:</p>
+<blockquote>
+<div><p><code class="docutils literal"><span class="pre">$</span> <span class="pre">cd</span> <span class="pre">./sample_analysis</span></code></p>
+</div></blockquote>
+</li>
+<li><p class="first">Then we can run the sample analysis in Docker in the same way that we would normally use tfbs_footprinter (above), e.g. using a .csv of arguments:</p>
+<blockquote>
+<div><p><code class="docutils literal"><span class="pre">$</span> <span class="pre">tfbs_footprinter</span> <span class="pre">-t</span> <span class="pre">./sample_analysis_list.csv</span></code></p>
+</div></blockquote>
+</li>
+</ol>
+<ul>
+<li><p class="first">Or (again, as above) using a .txt of Ensembl transcript ids, and minimal arguments:</p>
+<blockquote>
+<div><p><code class="docutils literal"><span class="pre">$tfbs_footprinter</span> <span class="pre">-t</span> <span class="pre">./sample_ensembl_ids.txt</span></code></p>
+</div></blockquote>
+</li>
+<li><p class="first">Or (again, as above) using a .txt of Ensembl transcript ids, and multiple arguments:</p>
+<blockquote>
+<div><p><code class="docutils literal"><span class="pre">$</span> <span class="pre">tfbs_footprinter</span> <span class="pre">-t</span> <span class="pre">./sample_ensembl_ids.txt</span> <span class="pre">-tfs</span> <span class="pre">./sample_jaspar_tf_ids.txt</span> <span class="pre">-s</span> <span class="pre">homo_sapiens</span> <span class="pre">-g</span> <span class="pre">mammals</span> <span class="pre">-e</span> <span class="pre">low</span> <span class="pre">-pb</span> <span class="pre">900</span> <span class="pre">-pa</span> <span class="pre">100</span> <span class="pre">-tx</span> <span class="pre">10</span> <span class="pre">-o</span> <span class="pre">./tfbs_results</span> <span class="pre">-update</span></code></p>
+</div></blockquote>
+</li>
+</ul>
+</div>
+<div class="section" id="example-using-user-defined-files-arguments">
+<h3>Example using user-defined files/arguments<a class="headerlink" href="#example-using-user-defined-files-arguments" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic">
+<li><p class="first">Within Docker we first need to mount a volume so that we can load your analysis files from your host computer into docker AND save the results of the analysis on our host computer:</p>
+<blockquote>
+<div><p><code class="docutils literal"><span class="pre">$</span> <span class="pre">docker</span> <span class="pre">run</span> <span class="pre">-v</span> <span class="pre">/ABSOLUTE_PATH_TO/DIR_ON_HOST/CONTAINING_ANALYSIS_FILES:/home/analysis_dir</span> <span class="pre">-it</span> <span class="pre">tfbs_footprinting</span> <span class="pre">bash</span></code></p>
+</div></blockquote>
+</li>
+<li><p class="first">Then we move into your analysis directory in the Docker container to perform the analysis there so that the results generated there will automatically appear in the designated location on our host computer:</p>
+<blockquote>
+<div><p><code class="docutils literal"><span class="pre">$</span> <span class="pre">cd</span> <span class="pre">./analysis_dir</span></code></p>
+</div></blockquote>
+</li>
+<li><p class="first">Then we can run the sample analysis in Docker in the same way that we would normally use tfbs_footprinter (above), e.g. using a .csv of arguments:</p>
+<blockquote>
+<div><p><code class="docutils literal"><span class="pre">$</span> <span class="pre">tfbs_footprinter</span> <span class="pre">-t</span> <span class="pre">./USER_TABLE_OF_ENSEMBL_IDS_AND_ARGS.csv</span></code></p>
+</div></blockquote>
+</li>
+</ol>
+<ul>
+<li><p class="first">Or (again, as above) using a .txt of Ensembl transcript ids, and minimal arguments:</p>
+<blockquote>
+<div><p><code class="docutils literal"><span class="pre">$</span> <span class="pre">tfbs_footprinter</span> <span class="pre">-t</span> <span class="pre">./USER_LIST_OF_ENSEMBL_IDS.txt</span></code></p>
+</div></blockquote>
+</li>
+<li><p class="first">Or (again, as above) using a .txt of Ensembl transcript ids, and multiple arguments:</p>
+<blockquote>
+<div><p><code class="docutils literal"><span class="pre">$</span> <span class="pre">tfbs_footprinter</span> <span class="pre">-t</span> <span class="pre">./USER_LIST_OF_ENSEMBL_IDS.txt</span> <span class="pre">-tfs</span> <span class="pre">./USER_LIST_OF_TF_NAMES.txt</span> <span class="pre">-s</span> <span class="pre">homo_sapiens</span> <span class="pre">-g</span> <span class="pre">mammals</span> <span class="pre">-e</span> <span class="pre">low</span> <span class="pre">-pb</span> <span class="pre">900</span> <span class="pre">-pa</span> <span class="pre">100</span> <span class="pre">-tx</span> <span class="pre">10</span> <span class="pre">-o</span> <span class="pre">PATH_TO/Results/</span> <span class="pre">-update</span></code></p>
+</div></blockquote>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="update-experimental-data-files">
+<h2>5.3 Update experimental data files<a class="headerlink" href="#update-experimental-data-files" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">5. Examples</a><ul>
+<li><a class="reference internal" href="#tfbs-footprinter-use-examples">5.1 TFBS_footprinter Use Examples</a><ul>
+<li><a class="reference internal" href="#running-the-sample-analyses">Running the sample analyses</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#tfbs-footprinter-use-examples-within-docker">5.2 TFBS_footprinter Use Examples <strong>Within Docker</strong></a><ul>
+<li><a class="reference internal" href="#id1">Running the sample analyses</a></li>
+<li><a class="reference internal" href="#example-using-user-defined-files-arguments">Example using user-defined files/arguments</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#update-experimental-data-files">5.3 Update experimental data files</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="output.html" title="previous chapter">4. Output</a></li>
+      <li>Next: <a href="arguments.html" title="next chapter">6. Arguments</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/examples.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Harlan Barker.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="_sources/examples.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

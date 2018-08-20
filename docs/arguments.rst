@@ -1,0 +1,53 @@
+6. Arguments
+==================
+-  --help, -h
+
+  show this help message and exit
+
+-  --t_ids_file, -t  
+  
+  Required for running an analysis. Location of a file containing Ensembl target_species transcript ids. Input options are either a text file of Ensembl transcript ids or a .csv file with individual values set for each parameter.
+
+-  --tf_ids_file, -tfs
+
+  [default: all Jaspar TFs] 
+  Location of a file containing a limited list of Jaspar TFs to use in scoring alignment (see sample file tf_ids.txt at https://github.com/thirtysix/TFBS_footprinting)
+
+-  --target_species, -s
+
+  [default: "homo_sapiens"]
+  Target species (string), options are located at https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#6-species. Conservation of TFs across other species will be based on identifying them in this species first.
+
+-  --species_group, -g
+
+  ("mammals", "primates", "sauropsids", or "fish")[default: "mammals"]
+  Group of species (string) to identify conservation of TFs within. Your target species should be a member of this species group (e.g. "homo_sapiens" and "mammals" or "primates"). The "primates" group does not have a low-coverage version. Groups and members are listed at https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#6-species.
+
+-  --coverage, -e
+
+  ("low" or "high") [default: "low"]
+  Which Ensembl EPO alignment of species to use. The low coverage contains significantly more species and is recommended. The primate group does not have a low-coverage version.
+
+-  --promoter_before_tss, -pb
+
+  (0-100,000) [default: 900]
+  Number (integer) of nucleotides upstream of TSS to include in analysis.  If this number is negative the start point will be downstream of the TSS, the end point will then need to be further downstream.
+
+-  --promoter_after_tss, -pa
+
+  (0-100,000) [default: 100]
+  Number (integer) of nucleotides downstream of TSS to include in analysis.  If this number is negative the end point will be upstream of the TSS.  The start point will then need to be further upstream.
+
+-  --top_x_tfs, -tx
+
+  (1-20) [default: 10]
+  Number (integer) of unique TFs to include in output .svg figure.
+
+-  --pval, -p
+
+  (range: 0.1 to 0.0000001)[default: 0.01] 
+  P-value (float) for determine score cutoff 
+
+-  --exp_data_update, -update
+
+  Download the latest experimental data files for use in analysis. Will run automatically if the "data" directory does not already exist (e.g. first usage).

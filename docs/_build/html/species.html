@@ -1,0 +1,450 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>8. Species &mdash; tfbs_footprinting 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="tfbs_footprinting 1.0 documentation" href="index.html" />
+    <link rel="prev" title="7. Process" href="process.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="species">
+<h1>8. Species<a class="headerlink" href="#species" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="ensembl">
+<h2>8.1 Ensembl<a class="headerlink" href="#ensembl" title="Permalink to this headline">¶</a></h2>
+<p>The promoter region of any Ensembl transcript of any species within any column can be compared against the other members of the same column in order to identify a conserved binding site of the 575 transcription factors described in the Jaspar database.  The Enredo-Pecan-Ortheus pipeline was used to create whole genome alignments between the species in each column.  &#8216;EPO_LOW&#8217; indicates this column also contains genomes for which the sequencing of the current version is still considered low-coverage.  The TFBS footprinting pipeline partially accounts for this by removing sequences from alignments which appear to be missing segments.  Due to the significantly greater number of species, we recommend using the low coverage versions except for primate comparisons which do not have a low coverage version.</p>
+<p>View the available Ensembl species groups to plan your analysis: <a class="reference external" href="https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json">https://rest.ensembl.org/info/compara/species_sets/EPO_LOW_COVERAGE?content-type=application/json</a>.</p>
+</div>
+<div class="section" id="species-table">
+<h2>8.2 Species table<a class="headerlink" href="#species-table" title="Permalink to this headline">¶</a></h2>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="15%" />
+<col width="13%" />
+<col width="14%" />
+<col width="13%" />
+<col width="15%" />
+<col width="13%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">EPO_LOW mammals</th>
+<th class="head">EPO_LOW fish</th>
+<th class="head">EPO_LOW sauropsids</th>
+<th class="head">EPO mammals</th>
+<th class="head">EPO primates</th>
+<th class="head">EPO fish</th>
+<th class="head">EPO sauropsids</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>ailuropoda_melanoleuca</td>
+<td>astyanax_mexicanus</td>
+<td>anas_platyrhynchos</td>
+<td>bos_taurus</td>
+<td>callithrix_jacchus</td>
+<td>danio_rerio</td>
+<td>anolis_carolinensis</td>
+</tr>
+<tr class="row-odd"><td>bos_taurus</td>
+<td>danio_rerio</td>
+<td>anolis_carolinensis</td>
+<td>callithrix_jacchus</td>
+<td>chlorocebus_sabaeus</td>
+<td>gasterosteus_aculeatus</td>
+<td>gallus_gallus</td>
+</tr>
+<tr class="row-even"><td>callithrix_jacchus</td>
+<td>gadus_morhua</td>
+<td>ficedula_albicollis</td>
+<td>canis_familiaris</td>
+<td>gorilla_gorilla</td>
+<td>lepisosteus_oculatus</td>
+<td>meleagris_gallopavo</td>
+</tr>
+<tr class="row-odd"><td>canis_familiaris</td>
+<td>gasterosteus_aculeatus</td>
+<td>gallus_gallus</td>
+<td>chlorocebus_sabaeus</td>
+<td>homo_sapiens</td>
+<td>oryzias_latipes</td>
+<td>taeniopygia_guttata</td>
+</tr>
+<tr class="row-even"><td>cavia_porcellus</td>
+<td>lepisosteus_oculatus</td>
+<td>meleagris_gallopavo</td>
+<td>equus_caballus</td>
+<td>macaca_mulatta</td>
+<td>tetraodon_nigroviridis</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>chlorocebus_sabaeus</td>
+<td>oreochromis_niloticus</td>
+<td>pelodiscus_sinensis</td>
+<td>felis_catus</td>
+<td>pan_troglodytes</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>choloepus_hoffmanni</td>
+<td>oryzias_latipes</td>
+<td>taeniopygia_guttata</td>
+<td>gorilla_gorilla</td>
+<td>papio_anubis</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>dasypus_novemcinctus</td>
+<td>poecilia_formosa</td>
+<td>&nbsp;</td>
+<td>homo_sapiens</td>
+<td>pongo_abelii</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>dipodomys_ordii</td>
+<td>takifugu_rubripes</td>
+<td>&nbsp;</td>
+<td>macaca_mulatta</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>echinops_telfairi</td>
+<td>tetraodon_nigroviridis</td>
+<td>&nbsp;</td>
+<td>mus_musculus</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>equus_caballus</td>
+<td>xiphophorus_maculatus</td>
+<td>&nbsp;</td>
+<td>oryctolagus_cuniculus</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>erinaceus_europaeus</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>ovis_aries</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>felis_catus</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>pan_troglodytes</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>gorilla_gorilla</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>papio_anubis</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>homo_sapiens</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>pongo_abelii</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>ictidomys_tridecemlineatus</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>rattus_norvegicus</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>loxodonta_africana</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>sus_scrofa</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>macaca_mulatta</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>microcebus_murinus</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>mus_musculus</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>mustela_putorius_furo</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>myotis_lucifugus</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>nomascus_leucogenys</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>ochotona_princeps</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>oryctolagus_cuniculus</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>otolemur_garnettii</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>ovis_aries</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>pan_troglodytes</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>papio_anubis</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>pongo_abelii</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>procavia_capensis</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>pteropus_vampyrus</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>rattus_norvegicus</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>sorex_araneus</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>sus_scrofa</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>tarsius_syrichta</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>tupaia_belangeri</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>tursiops_truncatus</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>vicugna_pacos</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">8. Species</a><ul>
+<li><a class="reference internal" href="#ensembl">8.1 Ensembl</a></li>
+<li><a class="reference internal" href="#species-table">8.2 Species table</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="process.html" title="previous chapter">7. Process</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/species.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Harlan Barker.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="_sources/species.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

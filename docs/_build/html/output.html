@@ -1,0 +1,164 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>4. Output &mdash; tfbs_footprinting 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="tfbs_footprinting 1.0 documentation" href="index.html" />
+    <link rel="next" title="5. Examples" href="examples.html" />
+    <link rel="prev" title="3. Input" href="input.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="output">
+<h1>4. Output<a class="headerlink" href="#output" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="promoter-figure">
+<h2>4.1 Promoter Figure<a class="headerlink" href="#promoter-figure" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><strong>Output name format</strong> - [Ensembl_transcript_id]_([nt_before_TSS]_[nt_after_TSS])_[species_group]_[species_coverage]_[pvalue].Promoterhisto.svg.</li>
+</ul>
+<img alt="output_primary" src="https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/sample_output_figure.png" />
+<ul class="simple">
+<li><strong>Figure Title (left)</strong> - Ensembl gene name and Transcript ID.</li>
+<li><strong>Predicted TFBSs</strong> - Depicts the region analyzed in this analysis.  Bars displayed on the positive y-axis indicate TFBS predictions made on the positive (+) DNA strand.  The legend of colors is located directly above, and correlates colors to the TF which is predicted to bind.  Combined affinity score is the summation of scores for the seven characteristics scored by the TFBS Footprinting tool (see <a class="reference internal" href="usage.html#uses"><span>1. Uses</span></a>).  Using the x-axis values at the bottom of the figure, the x-axis indicates nucleotide position relative to the TSS (e.g. -1000 is 1000 nt upstream of the TSS).</li>
+<li><strong>TF Expression Correlation</strong> - For the TFs with the highest combined affinity scores, the correlation of expression with the target gene has been determined and is presented in descending order of log-likelihood score.  The color legend is the same as the Predicted TFBSs subplot, and is located at the top of the figure.</li>
+<li><strong>Conservation</strong> - A measure of the conservation at each position in the alignment.</li>
+<li><strong>CpG Observed/Expected</strong> - Indidents of CpG (Cytosine-Phosphate-Guanine) are indicated with a vertical black line.  A line plot in red indicates the ratio of actual to expected CpGs (by chance alone) in a 200 nt window.</li>
+<li><strong>eQTLs</strong> - Locations of eQTLs identified in the <a class="reference external" href="https://www.gtexportal.org/home/">gTEX project</a> which affect the target gene.  Green bars on the positive y-axis indicate eQTLs assocaiate with enhanced expression of the target gene, while red bars on the negative y-axis indicate those associated with reduced expression.  The magnitude of the bars indicates the projected effect on gene expression.</li>
+<li><strong>TFBS Meta Clusters</strong> - Locations of TFBS metaclusters representing clusters of experimentally identifed (ENCODE and SRA databases) TFBSs which have been compiled by the <a class="reference external" href="http://gtrd.biouml.org/">GTRD project</a>.</li>
+<li><strong>ATAC-Seq</strong> - Locations of ATAC-Seq peaks identified by ENCODE experiments representing open chromatin.</li>
+<li><strong>CAGE peaks (TSSs)</strong> - Locations of TSSs identified by CAGE in the <a class="reference external" href="http://fantom.gsc.riken.jp/">FANTOM project</a>.</li>
+</ul>
+</div>
+<div class="section" id="table-of-predictions">
+<h2>4.2 Table of predictions<a class="headerlink" href="#table-of-predictions" title="Permalink to this headline">¶</a></h2>
+<p>All predicted TFBSs for target species which are supported by at least conservation_min predictions in other species, sorted by combined affinity score (TFBSs_found.sortedclusters.csv).</p>
+<ul class="simple">
+<li><strong>binding prot</strong> - Gene name of protein predicted to bind.</li>
+<li><strong>species</strong> - Name of target species.</li>
+<li><strong>motif</strong> - DNA sequence of target species which is predicted to be bound by the binding protein.</li>
+<li><strong>strand</strong> - Positive or negative strand of DNA.</li>
+<li><strong>start</strong> - Location in unaligned target species sequence of the start of the motif.</li>
+<li><strong>end</strong> - Location in unaligned target species sequence of the end of the motif.</li>
+<li><strong>TSS-relative start</strong> - Location relative to the TSS of the start of the motif.</li>
+<li><strong>TSS-relative end</strong> - Location relative to the TSS of the end of the motif.</li>
+<li><strong>frame score</strong> - Log-likelihood score of the prediction of the binding of the TF.</li>
+<li><strong>p-value</strong> - P-value corresponding to the frame score.</li>
+<li><strong>pos in align.</strong> - Location in the aligned target species sequence corresponding the start of the motif.</li>
+<li><strong>support</strong> - Number of species in alignment.</li>
+<li><strong>combined affinity score</strong> - Summation of all scores for this motif/prediction.</li>
+<li><strong>species weights sum</strong> - Information content of the alignment at the locations occupied by the TFBS.</li>
+<li><strong>cage weights sum</strong> - Summation of log-likehood scores for the CAGE peaks near the predicted TFBS.</li>
+<li><strong>eqtls weights sum</strong> - Summation of log-likehood scores for the eQTLs peaks near the predicted TFBS.</li>
+<li><strong>atac weights sum</strong> - Summation of log-likehood scores for the ATAC-Seq peaks near the predicted TFBS.</li>
+<li><strong>metacluster weights sum</strong> - Summation of log-likehood scores for the metacluster peaks near the predicted TFBS.</li>
+<li><strong>cpg weight</strong> - Log-likehood score for the CpG obs/exp ratio at the center of the predicted TFBS.</li>
+<li><strong>corr weight sum</strong> - Summation of log-likehood scores for correlations of expression between transcripts of the predicted TF and those of the target gene.</li>
+</ul>
+</div>
+<div class="section" id="addtional-outputs">
+<h2>4.2 Addtional outputs<a class="headerlink" href="#addtional-outputs" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Original alignment as retrieved from Ensembl (alignment_uncleaned.fasta).</li>
+<li>Cleaned alignment (alignment_cleaned.fasta).</li>
+<li>Regulatory information for the target transcripts user-defined promoter region (regulatory_decoded.json).</li>
+<li>Transcript properties for target transcript (transcript_dict.json).</li>
+<li>All predicted TFBSs for the target species which satisfy p-value threshold (TFBSs_found.all.json).</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">4. Output</a><ul>
+<li><a class="reference internal" href="#promoter-figure">4.1 Promoter Figure</a></li>
+<li><a class="reference internal" href="#table-of-predictions">4.2 Table of predictions</a></li>
+<li><a class="reference internal" href="#addtional-outputs">4.2 Addtional outputs</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="input.html" title="previous chapter">3. Input</a></li>
+      <li>Next: <a href="examples.html" title="next chapter">5. Examples</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/output.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Harlan Barker.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="_sources/output.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

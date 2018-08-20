@@ -1,0 +1,152 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>7. Process &mdash; tfbs_footprinting 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="tfbs_footprinting 1.0 documentation" href="index.html" />
+    <link rel="next" title="8. Species" href="species.html" />
+    <link rel="prev" title="6. Arguments" href="arguments.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="process">
+<h1>7. Process<a class="headerlink" href="#process" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="steps">
+<h2>7.1 Steps<a class="headerlink" href="#steps" title="Permalink to this headline">¶</a></h2>
+<p>Iterate through each user provided Ensembl transcript id:</p>
+<ol class="arabic">
+<li><p class="first">Retrieve EPO aligned orthologous sequences from Ensembl database for user-defined species group (mammals, primates, fish, sauropsids) for promoter of user-provided transcript id, between user-defined TSS-relative start/stop sites.</p>
+</li>
+<li><p class="first">Edit retrieved alignment:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Replace characters not corresponding to nucleotides (ACGT), with gaps characters &#8220;-&#8221;.</li>
+<li>Remove gap-only columns from alignment.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Generate position weight matrices (PWMs) from Jaspar position frequency matrices (PFMs).</p>
+</li>
+<li><p class="first">Score target species sequence using either all or a user-defined list of PWMs.</p>
+</li>
+<li><p class="first">Keep predictions with a log-likelihood score greater than score threshold corresponding to p-value of 0.001, or user-defined p-value.</p>
+</li>
+<li><p class="first">When experimental data is available for the target species, score each of the following for the target sequence region:</p>
+<blockquote>
+<div><ul class="simple">
+<li>DNA sequence conservation in homologous mammal species sequences</li>
+<li>proximity to CAGE-supported transcription start sites (TSSs)</li>
+<li>correlation of expression between target gene and predicted transcription factor (TF) across 1800+ samples</li>
+<li>proximity to ChIP-Seq determined TFBSs (GTRD project)</li>
+<li>proximity to qualitative trait loci (eQTLs) affecting expression of the target gene (GTEX project)</li>
+<li>proximity to CpGs</li>
+<li>proximity to ATAC-Seq peaks (ENCODE project)</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Compute &#8216;combined affinity score&#8217; as a sum of scores for all experimental data.</p>
+</li>
+<li><p class="first">Sort target_species predictions by combined affinity score, generate a vector graphics figure showing the top 10 (or user-defined) unique TFs mapped onto the promoter of the target transcript, and additional output as described below.</p>
+</li>
+</ol>
+</div>
+<div class="section" id="flowchart">
+<h2>7.2 Flowchart<a class="headerlink" href="#flowchart" title="Permalink to this headline">¶</a></h2>
+<img alt="flowchart" src="https://raw.githubusercontent.com/thirtysix/TFBS_footprinting/master/flowchart.png" />
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">7. Process</a><ul>
+<li><a class="reference internal" href="#steps">7.1 Steps</a></li>
+<li><a class="reference internal" href="#flowchart">7.2 Flowchart</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="arguments.html" title="previous chapter">6. Arguments</a></li>
+      <li>Next: <a href="species.html" title="next chapter">8. Species</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/process.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Harlan Barker.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="_sources/process.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
