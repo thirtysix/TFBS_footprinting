@@ -10,7 +10,7 @@
 
 - **Figure Title (left)** - Ensembl gene name and Transcript ID.
 
-- **Predicted TFBSs** - Depicts the region analyzed in this analysis.  Bars displayed on the positive y-axis indicate TFBS predictions made on the positive (+) DNA strand.  The legend of colors is located directly above, and correlates colors to the TF which is predicted to bind.  Combined affinity score is the summation of scores for the seven characteristics scored by the TFBS Footprinting tool (see :ref:`uses`).  Using the x-axis values at the bottom of the figure, the x-axis indicates nucleotide position relative to the TSS (e.g. -1000 is 1000 nt upstream of the TSS).
+- **Predicted TFBSs** - Depicts the region analyzed in this analysis.  Bars displayed on the positive y-axis indicate TFBS predictions made on the positive (+) DNA strand.  The legend of colors is located directly above, and correlates colors to the TF which is predicted to bind.  Combined affinity score is the summation of scores for the seven characteristics scored by the TFBS Footprinting tool (see :ref:`intro`).  Using the x-axis values at the bottom of the figure, the x-axis indicates nucleotide position relative to the TSS (e.g. -1000 is 1000 nt upstream of the TSS).
 
 - **TF Expression Correlation** - For the TFs with the highest combined affinity scores, the correlation of expression with the target gene has been determined and is presented in descending order of log-likelihood score.  The color legend is the same as the Predicted TFBSs subplot, and is located at the top of the figure.
 
