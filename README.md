@@ -3,8 +3,6 @@
 * This work is a derivative of ["Transcription factors"](https://commons.wikimedia.org/wiki/File:Transcription_Factors.svg) by [kelvin13](https://commons.wikimedia.org/wiki/User:Kelvin13), used under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)
 * * *
 
-Pipeline: Identification of cis-regulatory elements by matrix scoring and conservation across groups of species (mammals, primates, sauropsids, fish) catalogued in the Ensembl database.
-
 # Full documentation available at: [ReadTheDocs](https://tfbs-footprinting.readthedocs.io/en/latest/index.html)
 
 ## 1 Background
