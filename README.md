@@ -5,6 +5,8 @@
 
 Pipeline: Identification of cis-regulatory elements by matrix scoring and conservation across groups of species (mammals, primates, sauropsids, fish) catalogued in the Ensembl database.
 
+# Full documentation available at: [ReadTheDocs](https://tfbs-footprinting.readthedocs.io/en/latest/index.html)
+
 ## 1 Background
 The TFBS footprinting method computationally predicts transcription factor binding sites (TFBSs) in a target species (e.g. homo sapiens) using 575 position weight matrices (PWMs) based on binding data from the JASPAR database.  Additional experimental data from a variety of sources is used to support or detract from these predictions:
 * DNA sequence conservation in homologous mammal species sequences
@@ -36,7 +38,7 @@ The TFBS footprinting method computationally predicts transcription factor bindi
 
 
 ## 4 Usage 
-Predict TFBSs in the promoters any of 1-80,000 human protein coding transcripts.  TFBS predictions can also be made for 87 unique non-human species (including model organisms such as mouse and zebrafish), present in the following groups:
+Predict TFBSs in the promoters any of 1-80,000 human protein coding transcripts in the Ensembl database.  TFBS predictions can also be made for 87 unique non-human species (including model organisms such as mouse and zebrafish), present in the following groups:
 - 70 Eutherian mammals
 - 24 Primates
 - 11 Fish
@@ -118,9 +120,12 @@ View the available Ensembl species groups to plan your analysis: https://rest.en
 
 
 ### 4.4 Arguments
--  -h, --help show this help message and exit
--  --t_ids_file, -t  Required for running an analysis. Location of a file containing Ensembl target_species transcript ids. Input options are either a text file of Ensembl transcript ids or a .csv file with individual values set for each parameter.
--  --tf_ids_file, -tfs  Optional: Location of a file containing a limited list of Jaspar TFs to use in scoring alignment (see sample file tf_ids.txt at https://github.com/thirtysix/TFBS_footprinting)
+-  --help, -h 
+    show this help message and exit
+-  --t_ids_file, -t  
+    Required for running an analysis. Location of a file containing Ensembl target_species transcript ids. Input options are either a text file of Ensembl transcript ids or a .csv file with individual values set for each parameter.
+-  --tf_ids_file, -tfs  
+    Optional: Location of a file containing a limited list of Jaspar TFs to use in scoring alignment (see sample file tf_ids.txt at https://github.com/thirtysix/TFBS_footprinting)
     [default: all Jaspar TFs]
 -  --target_species, -s 
     [default: "homo_sapiens"] - Target species (string), options are located at https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#6-species. Conservation of TFs across other species will be based on identifying them in this species first.
@@ -129,15 +134,18 @@ View the available Ensembl species groups to plan your analysis: https://rest.en
     [default: "mammals"] - Group of species (string) to identify conservation of TFs within. Your target species should be a member of this species group (e.g.
     "homo_sapiens" and "mammals" or "primates"). The
     "primates" group does not have a low-coverage version. Groups and members are listed at https://github.com/thirtysix/TFBS_footprinting/blob/master/README.md#6-species.
--  --coverage, -e  ("low" or "high") [default: "low"] - Which Ensembl EPO alignment of species to use. The low coverage contains significantly more species and is recommended. The primate group does not have a low-coverage version.
+-  --coverage, -e  
+    ("low" or "high") [default: "low"] - Which Ensembl EPO alignment of species to use. The low coverage contains significantly more species and is recommended. The primate group does not have a low-coverage version.
 -  --promoter_before_tss, -pb 
-    (0-100,000) [default: 900] - Number (integer) of nucleotides upstream of TSS to include in analysis
-    (0-100,000).
+    (0-100,000) [default: 900] - Number (integer) of nucleotides upstream of TSS to include in analysis.  If this number is negative the start point will be downstream of the TSS, the end point will then need to be further downstream.
 -  --promoter_after_tss, -pa 
-    (0-100,000) [default: 100] - Number (integer) of nucleotides downstream of TSS to include in analysis.
--  --top_x_tfs, -tx(1-20) [default: 10] - Number (integer) of unique TFs to include in output .svg figure.
--  --pval PVAL, -p PVAL  P-value (float) for determine score cutoff (range: 0.1 to 0.0000001) [default: 0.01]
--  --exp_data_update, -update Download the latest experimental data files for use in analysis. Will run automatically if the "data" directory does not already exist (e.g. first usage).
+    (0-100,000) [default: 100] - Number (integer) of nucleotides downstream of TSS to include in analysis.  If this number is negative the end point will be upstream of the TSS.  The start point will then need to be further upstream.
+-  --top_x_tfs, -tx
+    (1-20) [default: 10] - Number (integer) of unique TFs to include in output .svg figure.
+-  --pval, -p
+    P-value (float) for determine score cutoff (range: 0.1 to 0.0000001) [default: 0.01]
+-  --exp_data_update, -update 
+    Download the latest experimental data files for use in analysis. Will run automatically if the "data" directory does not already exist (e.g. first usage).
 
 
 ## 5 Process
@@ -162,7 +170,7 @@ Iterate through each user provided Ensembl transcript id:
 
 
 ## 6 Species
-The promoter region of any Ensembl transcript of any species within any column can be compared against the other members of the same column in order to identify a conserved binding site of the 575 transcription factors described in the Jaspar database.  The Enredo-Pecan-Ortheus pipeline was used to create whole genome alignments between the species in each column.  'EPO_LOW' indicates this column also contains genomes for which the sequencing of the current version is still considered low-coverage.  The TFBS footprinting pipeline partially accounts for this by removing sequences from alignments which appear to be missing segments.  Due to the significantly greater number of species, we recommend using the low coverage versions except for primate comparisons which do not have a low coverage version.
+The promoter region of any Ensembl transcript of any species within any column can be compared against the other members of the same column in order to identify a conserved binding site of the 575 transcription factors described in the Jaspar database.  The Enredo-Pecan-Ortheus pipeline was used to create whole genome alignments between the species in each column.  'EPO_LOW' indicates this column also contains genomes for which the sequencing of the current version is still considered low-coverage.  Due to the significantly greater number of species, we recommend using the low coverage versions except for primate comparisons which do not have a low coverage version.  This list may not fully resp
 
 |EPO_LOW mammals           |EPO_LOW fish          |EPO_LOW sauropsids |EPO mammals          |EPO primates       |EPO fish              |EPO sauropsids     |
 |--------------------------|----------------------|-------------------|---------------------|-------------------|----------------------|-------------------|
