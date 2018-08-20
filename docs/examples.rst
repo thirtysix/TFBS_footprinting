@@ -16,14 +16,9 @@ Running the sample analyses
 	
 	``$ tfbs_footprinter -t PATH_TO/sample_analysis/sample_ensembl_ids.txt``
 
-Example using user-defined files/arguments
 - Run the sample analysis using a .txt of Ensembl transcript ids, and all arguments:
 
 	``$ tfbs_footprinter -t PATH_TO/sample_analysis/sample_ensembl_ids.txt -tfs PATH_TO/sample_analysis/sample_jaspar_tf_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -tx 10 -update``
-
-Update the experimental data files
-
-``$ tfbs_footprinter -update``
 
 
 ---------------------------------------------------
@@ -78,3 +73,6 @@ Example using user-defined files/arguments
 ----------------------------------
 5.3 Update experimental data files
 ----------------------------------
+This does not need to be run once every few months, check the documentation on `ReadTheDocs <https://tfbs-footprinting.readthedocs.io/en/latest/>`_ for new releases.
+
+``$ tfbs_footprinter -update``
