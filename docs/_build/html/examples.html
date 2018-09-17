@@ -71,7 +71,7 @@
 <ol class="arabic">
 <li><p class="first">Within Docker we first need to mount a volume so that the results of the analyis can be viewed on our host computer.  It is recommended that you create an empty directory on your host computer:</p>
 <blockquote>
-<div><p><code class="docutils literal"><span class="pre">$</span> <span class="pre">docker</span> <span class="pre">run</span> <span class="pre">-v</span> <span class="pre">/ABSOLUTE_PATH_TO/EMPTY_DIR_ON_HOST:/home/sample_analysis/tfbs_results</span> <span class="pre">-it</span> <span class="pre">tfbs_footprinting</span> <span class="pre">bash</span></code></p>
+<div><p><code class="docutils literal"><span class="pre">$</span> <span class="pre">docker</span> <span class="pre">run</span> <span class="pre">-v</span> <span class="pre">/ABSOLUTE_PATH_TO/EMPTY_DIR_ON_HOST:/home/sample_analysis/tfbs_results</span> <span class="pre">-it</span> <span class="pre">thirtysix/tfbs_footprinting</span> <span class="pre">bash</span></code></p>
 </div></blockquote>
 </li>
 <li><p class="first">Then we move into the pre-existing sample analysis directory in the Docker container to perform the analysis there so that the results generated there will automatically appear in the designated location on our host computer:</p>
@@ -103,7 +103,7 @@
 <ol class="arabic">
 <li><p class="first">Within Docker we first need to mount a volume so that we can load your analysis files from your host computer into docker AND save the results of the analysis on our host computer:</p>
 <blockquote>
-<div><p><code class="docutils literal"><span class="pre">$</span> <span class="pre">docker</span> <span class="pre">run</span> <span class="pre">-v</span> <span class="pre">/ABSOLUTE_PATH_TO/DIR_ON_HOST/CONTAINING_ANALYSIS_FILES:/home/analysis_dir</span> <span class="pre">-it</span> <span class="pre">tfbs_footprinting</span> <span class="pre">bash</span></code></p>
+<div><p><code class="docutils literal"><span class="pre">$</span> <span class="pre">docker</span> <span class="pre">run</span> <span class="pre">-v</span> <span class="pre">/ABSOLUTE_PATH_TO/DIR_ON_HOST/CONTAINING_ANALYSIS_FILES:/home/analysis_dir</span> <span class="pre">-it</span> <span class="pre">thirtysix/tfbs_footprinting</span> <span class="pre">bash</span></code></p>
 </div></blockquote>
 </li>
 <li><p class="first">Then we move into your analysis directory in the Docker container to perform the analysis there so that the results generated there will automatically appear in the designated location on our host computer:</p>
