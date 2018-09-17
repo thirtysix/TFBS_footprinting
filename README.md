@@ -81,7 +81,7 @@ View the available Ensembl species groups to plan your analysis: https://rest.en
 #### Running the sample analyses
 1. Within Docker we first need to mount a volume so that the results of the analyis can be viewed on our host computer.  It is recommended that you create an empty directory on your host computer:
 
-	`$ docker run -v /ABSOLUTE_PATH_TO/EMPTY_DIR_ON_HOST:/home/sample_analysis/tfbs_results -it tfbs_footprinting bash`
+	`$ docker run -v /ABSOLUTE_PATH_TO/EMPTY_DIR_ON_HOST:/home/sample_analysis/tfbs_results -it thirtysix/tfbs_footprinting bash`
 
 2. Then we move into the pre-existing sample analysis directory in the Docker container to perform the analysis there so that the results generated there will automatically appear in the designated location on our host computer:
 
@@ -102,7 +102,7 @@ View the available Ensembl species groups to plan your analysis: https://rest.en
 #### Example using user-defined files/arguments
 1. Within Docker we first need to mount a volume so that we can __load your analysis files from your host computer__ into docker AND __save the results of the analysis on our host computer__:
 
-	`$ docker run -v /ABSOLUTE_PATH_TO/DIR_ON_HOST/CONTAINING_ANALYSIS_FILES:/home/analysis_dir -it tfbs_footprinting bash`
+	`$ docker run -v /ABSOLUTE_PATH_TO/DIR_ON_HOST/CONTAINING_ANALYSIS_FILES:/home/analysis_dir -it thirtysix/tfbs_footprinting bash`
 2. Then we move into your analysis directory in the Docker container to perform the analysis there so that the results generated there will automatically appear in the designated location on our host computer:
 
 	`$ cd ./analysis_dir`
