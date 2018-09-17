@@ -19,6 +19,7 @@ Contents:
    arguments.rst
    process.rst
    species.rst
+   troubleshooting.rst
 
 
 

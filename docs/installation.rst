@@ -15,6 +15,9 @@ Additionally, the TFBS_footprinting package has been included in an Ubuntu-based
 
 ``$ docker pull thirtysix/tfbs_footprinting``
 
+The Docker installation will have a default RAM allocation that is too low (~2GB) to run TFBS_footprinting.  This setting should be changed to >6144MB.
+In Windows this can be adjusted by navigating through: Docker system tray icon>Settings>Advanced>Memory.  After changing this value, Docker will restart, which could take several minutes.
+
 
 ----------------
 2.3 Requirements
