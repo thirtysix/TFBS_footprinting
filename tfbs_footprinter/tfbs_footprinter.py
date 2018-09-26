@@ -2320,6 +2320,85 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
 
 
 
+
+def species_specific_data(target_species, species_specific_data_dir):
+    """
+    Many datasets are species-specific.  If the current target species has species-specific datasets, load them.
+    """
+    
+    # load GERP locations
+    gerp_conservation_locations_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'gerp_conservation.locations_dict.e93.msg']))
+    gerp_conservation_locations_dict = load_msgpack(gerp_conservation_locations_dict_filename)
+
+    # load GERP conservation weights
+    gerp_conservation_weight_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'gerp_conservation.weight_dict.e93.msg']))
+    gerp_conservation_weight_dict = load_msgpack(gerp_conservation_weight_dict_filename)
+
+    # load human CAGE locs occuring near promoters
+    cage_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'cage.promoters.grch38.2000.genomic_coords.msg']))
+    cage_dict = load_msgpack(cage_dict_filename)
+
+    # load CAGE dist weights
+    cage_dist_weights_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'cage_dist_weights.json']))
+    cage_dist_weights_dict = load_json(cage_dist_weights_dict_filename)
+
+    # load CAGE correlations
+    cage_correlations_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'rekeyed_combined_cage_corr_dict.jaspar.msg']))
+    cage_correlations_dict = load_msgpack(cage_correlations_dict_filename)
+
+    # load CAGE correlation weights
+    cage_corr_weights_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'cage_corr_weights.json']))
+    cage_corr_weights_dict = load_json(cage_corr_weights_dict_filename)
+    cage_corr_weights_dict = {float(k):v for k,v in cage_corr_weights_dict.iteritems()}
+
+    # load CAGE keys
+    cage_keys_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'cage_ids_key_dict.json']))
+    cage_keys_dict = load_json(cage_keys_dict_filename)
+
+    # load JASPAR tfs to Ensembl transcript ids
+    jasparTFs_transcripts_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'jasparTFs.transcripts.single_protein.dict.json']))
+    jasparTFs_transcripts_dict = load_json(jasparTFs_transcripts_dict_filename)
+
+    # load ATAC-Seq dist weights
+    atac_dist_weights_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'atac_dist_weights.json']))
+    atac_dist_weights_dict = load_json(atac_dist_weights_dict_filename)
+
+##    # load metacluster dist weights
+##    metacluster_dist_weights_dict_filename = os.path.join(script_dir, 'data/metacluster_dist_weights.json')
+##    metacluster_dist_weights_dict = load_json(metacluster_dist_weights_dict_filename)
+
+    # load metacluster overlap weights
+    metacluster_overlap_weights_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'metaclusters_overlap_weights_dict.json']))
+    metacluster_overlap_weights_dict = load_json(metacluster_overlap_weights_dict_filename)
+    metacluster_overlap_weights_dict = {float(k):float(v) for k,v in metacluster_overlap_weights_dict.iteritems()}
+
+    # load CpG score weights
+    cpg_obsexp_weights_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'cpg_obsexp_weights.json']))
+    cpg_obsexp_weights_dict = load_json(cpg_obsexp_weights_dict_filename)
+    cpg_obsexp_weights_dict = {float(k):float(v) for k,v in cpg_obsexp_weights_dict.iteritems()}
+    cpg_obsexp_weights_dict_keys = cpg_obsexp_weights_dict.keys()
+    cpg_obsexp_weights_dict_keys.sort()
+
+    # load GTEx variants
+    gtex_variants_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'gtex_reduced.loc_effect.uniques.grch38.msg']))
+    gtex_variants_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'gtex_reduced.loc_effect.uniques.tupled.grch38.msg']))
+    gtex_variants = load_msgpack(gtex_variants_filename)
+
+    # load GTEx weights
+    gtex_weights_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'gtex_weights.json']))
+    gtex_weights_dict = load_json(gtex_weights_dict_filename)
+    gtex_weights_dict = {float(k):float(v) for k,v in gtex_weights_dict.iteritems()}
+
+    # load human meta clusters from GTRD project
+    gtrd_metaclusters_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'meta_clusters.interval.-chr.clipped.ordered.tupled.msg']))
+    gtrd_metaclusters_dict = load_msgpack(gtrd_metaclusters_dict_filename)
+
+    # load human ATAC-Seq from Encode project
+    atac_seq_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'atac-seq.combined.merged.reduced.tupled.msg']))
+    atac_seq_dict = load_msgpack(atac_seq_dict_filename)
+
+    return gerp_conservation_locations_dict, gerp_conservation_weight_dict, cage_dict, cage_dist_weights_dict, cage_correlations_dict, cage_corr_weights_dict, cage_keys_dict, jasparTFs_transcripts_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, gtex_variants, gtex_weights_dict, gtrd_metaclusters_dict, atac_seq_dict
+
 ################################################################################
 # Initiating Variables #########################################################
 ################################################################################
@@ -2345,12 +2424,11 @@ def main():
         if len(args_lists) > 0:
 
             # analysis variables
+            # non-species-specific
             # dictionary of thresholds for each TF
-            pwm_score_threshold_dict_filename = os.path.join(script_dir, 'data/all_tfs_thresholds.jaspar_2018.1.json')
-
-        ##    # updated version, which requires the presence of a current versions file
-        ##    pwm_score_threshold_dict_filename = os.path.join(experimental_data_dir, current_versions["jaspar_thresholds"])
-
+            ##    # updated version, which requires the presence of a current versions file
+            ##    pwm_score_threshold_dict_filename = os.path.join(experimental_data_dir, current_versions["jaspar_thresholds"])
+            pwm_score_threshold_dict_filename = os.path.join(script_dir, 'data/all_tfs_thresholds.jaspar_2018.1.json')        
             pwm_score_threshold_dicta = load_json(pwm_score_threshold_dict_filename)
             pwm_score_threshold_dict = {}
             for k,v in pwm_score_threshold_dicta.iteritems():
@@ -2364,84 +2442,16 @@ def main():
             # load JASPAR PWM score weights
             all_pwms_loglikelihood_dict_filename = os.path.join(script_dir, 'data/all_pwms_loglikelihood_dict.reduced.msg')
             all_pwms_loglikelihood_dict = load_msgpack(all_pwms_loglikelihood_dict_filename)
-
-            # load GERP locations
-            gerp_conservation_locations_dict_filename = os.path.join(script_dir, 'data/homo_sapiens.gerp_conservation.locations_dict.e93.msg')
-            gerp_conservation_locations_dict = load_msgpack(gerp_conservation_locations_dict_filename)
-
-            # load GERP conservation weights
-            gerp_conservation_weight_dict_filename = os.path.join(script_dir, 'data/homo_sapiens.gerp_conservation.weight_dict.e93.msg')
-            gerp_conservation_weight_dict = load_msgpack(gerp_conservation_weight_dict_filename)
-
-            # load human CAGE locs occuring near promoters
-            cage_dict_filename = os.path.join(script_dir, 'data/cage.promoters.grch38.2000.genomic_coords.msg')
-            cage_dict = load_msgpack(cage_dict_filename)
-
-            # load CAGE dist weights
-            cage_dist_weights_dict_filename = os.path.join(script_dir, 'data/cage_dist_weights.json')
-            cage_dist_weights_dict = load_json(cage_dist_weights_dict_filename)
-
-            # load CAGE correlations
-            cage_correlations_dict_filename = os.path.join(script_dir, 'data/rekeyed_combined_cage_corr_dict.jaspar.msg')
-            cage_correlations_dict = load_msgpack(cage_correlations_dict_filename)
-
-            # load CAGE correlation weights
-            cage_corr_weights_dict_filename = os.path.join(script_dir, 'data/cage_corr_weights.json')
-            cage_corr_weights_dict = load_json(cage_corr_weights_dict_filename)
-            cage_corr_weights_dict = {float(k):v for k,v in cage_corr_weights_dict.iteritems()}
-
-            # load CAGE keys
-            cage_keys_dict_filename = os.path.join(script_dir, 'data/cage_ids_key_dict.json')
-            cage_keys_dict = load_json(cage_keys_dict_filename)
-
-            # load JASPAR tfs to Ensembl transcript ids
-            jasparTFs_transcripts_dict_filename = os.path.join(script_dir, 'data/jasparTFs.transcripts.single_protein.dict.json')
-            jasparTFs_transcripts_dict = load_json(jasparTFs_transcripts_dict_filename)
-
-            # load ATAC-Seq dist weights
-            atac_dist_weights_dict_filename = os.path.join(script_dir, 'data/atac_dist_weights.json')
-            atac_dist_weights_dict = load_json(atac_dist_weights_dict_filename)
-
-        ##    # load metacluster dist weights
-        ##    metacluster_dist_weights_dict_filename = os.path.join(script_dir, 'data/metacluster_dist_weights.json')
-        ##    metacluster_dist_weights_dict = load_json(metacluster_dist_weights_dict_filename)
-
-            # load metacluster overlap weights
-            metacluster_overlap_weights_dict_filename = os.path.join(script_dir, 'data/metaclusters_overlap_weights_dict.json')
-            metacluster_overlap_weights_dict = load_json(metacluster_overlap_weights_dict_filename)
-            metacluster_overlap_weights_dict = {float(k):float(v) for k,v in metacluster_overlap_weights_dict.iteritems()}
-
-            # load CpG score weights
-            cpg_obsexp_weights_dict_filename = os.path.join(script_dir, 'data/cpg_obsexp_weights.json')
-            cpg_obsexp_weights_dict = load_json(cpg_obsexp_weights_dict_filename)
-            cpg_obsexp_weights_dict = {float(k):float(v) for k,v in cpg_obsexp_weights_dict.iteritems()}
-            cpg_obsexp_weights_dict_keys = cpg_obsexp_weights_dict.keys()
-            cpg_obsexp_weights_dict_keys.sort()
-
-            # load GTEx variants
-            gtex_variants_filename = os.path.join(script_dir, 'data/gtex_reduced.loc_effect.uniques.grch38.msg')
-            gtex_variants_filename = os.path.join(script_dir, 'data/gtex_reduced.loc_effect.uniques.tupled.grch38.msg')
-            gtex_variants = load_msgpack(gtex_variants_filename)
-
-            # load GTEx weights
-            gtex_weights_dict_filename = os.path.join(script_dir, 'data/gtex_weights.json')
-            gtex_weights_dict = load_json(gtex_weights_dict_filename)
-            gtex_weights_dict = {float(k):float(v) for k,v in gtex_weights_dict.iteritems()}
-
-            # load human meta clusters from GTRD project
-        ##    gtrd_metaclusters_dict_filename = os.path.join(script_dir, 'data/human_meta_clusters.interval.clipped.msg')
-            gtrd_metaclusters_dict_filename = os.path.join(script_dir, 'data/human_meta_clusters.interval.-chr.clipped.ordered.tupled.msg')
-            gtrd_metaclusters_dict = load_msgpack(gtrd_metaclusters_dict_filename)
-
-            # load human ATAC-Seq from Encode project
-        ##    atac_seq_dict_filename = os.path.join(script_dir, 'data/atac-seq.combined.merged.msg')
-            atac_seq_dict_filename = os.path.join(script_dir, 'data/atac-seq.combined.merged.reduced.tupled.msg')
-            atac_seq_dict = load_msgpack(atac_seq_dict_filename)
         
-        for args_list in args_lists:
-    ##        args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, output_dir, pval = args_list
+        for i, args_list in enumerate(args_lists):
+            
             args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, pval = args_list
+            species_specific_data_dir = os.path.join(script_dir, 'data', target_species)
 
+            # species-specific  
+            if i == 0 or (i>0 and args_lists[i-1][4] != target_species):
+                if os.path.exists(species_specific_data_dir):
+                    gerp_conservation_locations_dict, gerp_conservation_weight_dict, cage_dict, cage_dist_weights_dict, cage_correlations_dict, cage_corr_weights_dict, cage_keys_dict, jasparTFs_transcripts_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, gtex_variants, gtex_weights_dict, gtrd_metaclusters_dict, atac_seq_dict = species_specific_data(target_species, species_specific_data_dir)
             print transcript_id
 
             # Create directory for results
