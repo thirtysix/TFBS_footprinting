@@ -43,6 +43,7 @@ from decimal import *
 from operator import itemgetter
 import collections
 from bisect import bisect_left
+from bisect import bisect_right
 import itertools
 
 ################################################################################
@@ -770,7 +771,7 @@ def unaligned2aligned_indexes(cleaned_aligned_filename):
     return unaligned2aligned_index_dict
 
 
-def find_clusters(alignment, info_content_dict, target_species, tfbss_found_dict, cleaned_aligned_filename, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):    
+def find_clusters(alignment, target_species, chromosome, tfbss_found_dict, cleaned_aligned_filename, converted_gerps_in_promoter, gerp_conservation_weight_dict, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):
     """
     For each target species hit:
     Identify the highest score for each species within the locality threshold.
@@ -786,12 +787,14 @@ def find_clusters(alignment, info_content_dict, target_species, tfbss_found_dict
             combined_affinity_score = 0
             target_species_hit = hit
             target_species_pwm_score = target_species_hit[8]
-            species_weights_sum = conservation_information_content(target_species_hit, info_content_dict)
+##            species_weights_sum = conservation_information_content(target_species_hit, info_content_dict)
+            species_weights_sum = 0
             cage_weights_sum = 0
             eqtls_weights_sum = 0
             atac_weights_sum = 0
             metacluster_weights_sum = 0
             corr_weight_sum = 0
+            tf_len = len(hit[2])
 
             # datasets only available for homo sapiens
             if target_species == "homo_sapiens":
@@ -800,7 +803,7 @@ def find_clusters(alignment, info_content_dict, target_species, tfbss_found_dict
                 atac_weights_sum = atac_weights_summing(transcript_id, target_species_hit, atac_dist_weights_dict, converted_atac_seqs_in_promoter)
                 metacluster_weights_sum = metacluster_weights_summing(transcript_id, target_species_hit, metacluster_overlap_weights_dict, converted_metaclusters_in_promoter)
                 corr_weight_sum, cage_correlations_hit_tf_dict = cage_correlations_summing(target_species_hit, transcript_id, cage_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict, cage_correlations_hit_tf_dict)
-
+                species_weights_sum = gerp_weights_summing(transcript_id, chromosome, target_species_hit, gerp_conservation_weight_dict, converted_gerps_in_promoter)
             cpg_weight = cpg_weights_summing(transcript_id, target_species_hit, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, cpg_list)
 
             experimental_weights = [species_weights_sum, cage_weights_sum, eqtls_weights_sum, atac_weights_sum, metacluster_weights_sum, cpg_weight, corr_weight_sum]
@@ -823,84 +826,88 @@ def find_clusters(alignment, info_content_dict, target_species, tfbss_found_dict
     return cluster_dict, cage_correlations_hit_tf_dict
 
 
-def alignment_info_content(aligned_filename):
-    """
-    The BioPython alignInfo.information_content module is slow,
-    and uses generic nucleotide frequencies (C,G = 0.4; A,T = 0.1).
-    Identify information content (IC) of all locations in the alignment.
-    This dictionary of ICs can then be used for putative TFBSs.
-    *FIX: Use an existing cleaned alignment object instead of reading from file.
-    """
-
-    bg_nuc_freq_dict = {'A':0.292, 'C':0.207, 'G':0.207, 'T':0.292}
-    alignment = AlignIO.read(aligned_filename, "fasta")
-    target_species_row = alignment[0]
-    info_content_dict = {}
-    pseudo_count = 1
-
-    for i in range(0, len(target_species_row)):   
-        alignment_col = alignment[:,i]
-        char_counts = collections.Counter(alignment_col)
-        chars_count = float(sum(char_counts.values()))
-        info_content = sum([((char_count+pseudo_count)/chars_count) * math.log(((char_count+pseudo_count)/chars_count)/bg_nuc_freq_dict[char]) for char, char_count in char_counts.iteritems() if char in "ACGT"])
-        info_content_dict[i] = info_content
-    
-    return info_content_dict
-
-
-def alignment_summary(alignment):
-    """
-    Uses Biopython's information_content module, which is very slow.
-    The current implementation replaces the previous one which called this
-    function for every putative TFBS, which can greatly outnumber the length of the
-    alignment if the p-value threshold is set low.  Current implementation scores
-    the whole alignment at the beginning and stores IC content to a dict.
-    Build an alignment object.  Generate an alignment summary.
-    Score for information content at each position in the alignment.
-    """
-
-    # build alignment for analysis of conservation via information content
-    if len(alignment) > 1:
-        msl_list = []
-        for entry in alignment:
-            record = SeqRecord(Seq(entry['seq'], alphabet = generic_dna), id = entry['species'], description = "")
-            msl_list.append(record)
-
-        # Generate an alignment summary.
-        msl = MultipleSeqAlignment(msl_list)
-        msl_summary = AlignInfo.SummaryInfo(msl)
-
-    else:
-        msl_summary = None
-    
-    # Score for information content at each position in the alignment. 
-    info_content_dict = {}
-    if msl_summary != None:
-        for i in range(0, len(alignment[0]['seq'])-1):
-##            if i%100 ==0:
-##                print i
-            info_content = msl_summary.information_content(i, i+1, chars_to_ignore = ['N'])
-            info_content_dict[i] = info_content        
-
-    return info_content_dict
+##def alignment_info_content(aligned_filename):
+##    """
+##    DEPRECATED: Now using GERP scores for conservation analysis.
+##    The BioPython alignInfo.information_content module is slow,
+##    and uses generic nucleotide frequencies (C,G = 0.4; A,T = 0.1).
+##    Identify information content (IC) of all locations in the alignment.
+##    This dictionary of ICs can then be used for putative TFBSs.
+##    *FIX: Use an existing cleaned alignment object instead of reading from file.
+##    """
+##
+##    bg_nuc_freq_dict = {'A':0.292, 'C':0.207, 'G':0.207, 'T':0.292}
+##    alignment = AlignIO.read(aligned_filename, "fasta")
+##    target_species_row = alignment[0]
+##    info_content_dict = {}
+##    pseudo_count = 1
+##
+##    for i in range(0, len(target_species_row)):   
+##        alignment_col = alignment[:,i]
+##        char_counts = collections.Counter(alignment_col)
+##        chars_count = float(sum(char_counts.values()))
+##        info_content = sum([((char_count+pseudo_count)/chars_count) * math.log(((char_count+pseudo_count)/chars_count)/bg_nuc_freq_dict[char]) for char, char_count in char_counts.iteritems() if char in "ACGT"])
+##        info_content_dict[i] = info_content
+##    
+##    return info_content_dict
 
 
-def conservation_information_content(target_species_hit, info_content_dict):
-    """
-    Sum pre-calculated values, for the information content at each location
-    in the alignment, across for this location in the alignment.
-    """
+##def alignment_summary(alignment):
+##    """
+##    DEPRECATED: Now using GERP scores for conservation analysis.
+##    DEPRECATED: Now using alignment_info_content().
+##    Uses Biopython's information_content module, which is very slow.
+##    The current implementation replaces the previous one which called this
+##    function for every putative TFBS, which can greatly outnumber the length of the
+##    alignment if the p-value threshold is set low.  Current implementation scores
+##    the whole alignment at the beginning and stores IC content to a dict.
+##    Build an alignment object.  Generate an alignment summary.
+##    Score for information content at each position in the alignment.
+##    """
+##
+##    # build alignment for analysis of conservation via information content
+##    if len(alignment) > 1:
+##        msl_list = []
+##        for entry in alignment:
+##            record = SeqRecord(Seq(entry['seq'], alphabet = generic_dna), id = entry['species'], description = "")
+##            msl_list.append(record)
+##
+##        # Generate an alignment summary.
+##        msl = MultipleSeqAlignment(msl_list)
+##        msl_summary = AlignInfo.SummaryInfo(msl)
+##
+##    else:
+##        msl_summary = None
+##    
+##    # Score for information content at each position in the alignment. 
+##    info_content_dict = {}
+##    if msl_summary != None:
+##        for i in range(0, len(alignment[0]['seq'])-1):
+####            if i%100 ==0:
+####                print i
+##            info_content = msl_summary.information_content(i, i+1, chars_to_ignore = ['N'])
+##            info_content_dict[i] = info_content        
+##
+##    return info_content_dict
 
-    if len(info_content_dict) != 0:
-        start = target_species_hit[4]
-        end = target_species_hit[5]
 
-        info_content = sum([info_content_dict[x] for x in range(start, end)])
-
-    else:
-        info_content = 0
-
-    return info_content
+##def conservation_information_content(target_species_hit, info_content_dict):
+##    """
+##    DEPRECATED: Now using GERP scores for conservation analysis.
+##    Sum pre-calculated values, for the information content at each location
+##    in the alignment, across for this location in the alignment.
+##    """
+##
+##    if len(info_content_dict) != 0:
+##        start = target_species_hit[4]
+##        end = target_species_hit[5]
+##
+##        info_content = sum([info_content_dict[x] for x in range(start, end)])
+##
+##    else:
+##        info_content = 0
+##
+##    return info_content
     
 
 ##def alignment_summary(alignment):
@@ -1165,6 +1172,34 @@ def metacluster_weights_summing(transcript_id, target_species_hit, metacluster_o
     return metacluster_weights_sum
 
 
+def gerp_weights_summing(transcript_id, chromosome, target_species_hit, gerp_conservation_weight_dict, converted_gerps_in_promoter):
+    """
+    Identify the gerps which are near this predicted TFBS.
+    Retrieve a log-likelihood score for this distance from the pre-existing dictionary.
+    """  
+
+    motif_start = target_species_hit[6]
+    motif_end = target_species_hit[7]
+    tf_len = len(target_species_hit[2])
+
+    dists = []
+    for converted_gerp_in_promoter in converted_gerps_in_promoter:
+        converted_gerp_in_promoter_start = converted_gerp_in_promoter[0]
+        converted_gerp_in_promoter_end = converted_gerp_in_promoter[1]
+
+        dist = distance_solve([motif_start, motif_end], [converted_gerp_in_promoter_start, converted_gerp_in_promoter_end])
+        dists.append(dist)
+        dists.sort()
+        best_dist = dists[0]
+
+        if best_dist == 0:
+            gerp_weights_sum = gerp_conservation_weight_dict[chromosome][str(tf_len)][best_dist]
+        else:
+            gerp_weights_sum = 0
+
+    return gerp_weights_sum
+
+
 def cpg_weights_summing(transcript_id, target_species_hit, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, cpg_list):
     """
     Retrieve a CpG weight score based on the CpG obs/exp of the midpoint of the
@@ -1172,7 +1207,6 @@ def cpg_weights_summing(transcript_id, target_species_hit, cpg_obsexp_weights_di
     """
 
     # retrieve locations and CpG obs/exp score for the midpoint of this predicted TFBS
-##    human_hit = cluster[0]
     motif_start = target_species_hit[4]
     motif_end = target_species_hit[5]
     motif_midpoint = (motif_end + motif_start)/2
@@ -1754,6 +1788,70 @@ def gtex_position_translate(ens_gene_id,gtex_variants,tss,promoter_start,promote
     return converted_eqtls
 
 
+def distance_solve(r1, r2):
+     # sort the two ranges such that the range with smaller first element
+     # is assigned to x and the bigger one is assigned to y
+     x, y = sorted((r1, r2))
+
+     #now if x[1] lies between x[0] and y[0](x[1] != y[0] but can be equal to x[0])
+     #then the ranges are not overlapping and return the differnce of y[0] and x[1]
+     #otherwise return 0 
+     if x[1] < y[0]:
+        return y[0] - x[1]
+     return 0
+    
+
+def gerp_positions_translate(target_dir, gerp_conservation_locations_dict, chromosome, strand, promoter_start, promoter_end, tss):
+    """
+    Identify GERP constrained conservation locations which occur within the defined promoter region.
+    Convert positions of GERP elements (json) to coordinates usable by the plot_promoter function.
+    Requires supplying location relative to TSS (i.e. negative).
+    For creating a left to right plot of the promoter, regardless of strand:
+    Converted_reg_start is the leftmost regulatory position.
+    Converted_reg_end is the rightmost regulatory position.
+    """
+
+    potential_gerps_in_promoter = []
+    gerps_in_promoter = []
+
+    # because a prediction can occur at the start/end of a defined promoter
+    extended_range = 1000
+    
+    if chromosome in gerp_conservation_locations_dict:
+##        promoter_start_millions = promoter_start/1000000
+##        promoter_end_millions = promoter_end/1000000
+
+        left_most_index = bisect_left([x[0] for x in gerp_conservation_locations_dict[chromosome]], promoter_start - extended_range)
+        right_most_index = bisect_right([x[0]+x[1] for x in gerp_conservation_locations_dict[chromosome]], promoter_end + extended_range)
+                
+        potential_gerps_in_promoter = gerp_conservation_locations_dict[chromosome][left_most_index-1:right_most_index+1]
+    
+        for potential_gerp_in_promoter in potential_gerps_in_promoter:
+            overlap = overlap_range([promoter_start - extended_range, promoter_end + extended_range], [potential_gerp_in_promoter[0], potential_gerp_in_promoter[0]+potential_gerp_in_promoter[1]])
+        
+            if len(overlap) > 0:
+                gerps_in_promoter.append(potential_gerp_in_promoter)
+             
+
+    # convert the positions of the in-promoter metaclusters to tss-relative
+    converted_gerps_in_promoter = []
+    for gerp_in_promoter in gerps_in_promoter:
+        gerp_start = gerp_in_promoter[0]
+        gerp_end = gerp_start + gerp_in_promoter[1]
+
+        if strand == 1:
+            converted_gerp_start = (tss - gerp_start) * -1
+            converted_gerp_end = (tss - gerp_end) * -1
+        if strand == -1:
+            converted_gerp_start = (tss - gerp_start)
+            converted_gerp_end = (tss - gerp_end)
+
+        converted_gerp = [converted_gerp_start, converted_gerp_end]
+        converted_gerps_in_promoter.append(converted_gerp)
+
+    return converted_gerps_in_promoter
+
+
 def gtrd_positions_translate(target_dir, gtrd_metaclusters_dict, chromosome, strand, promoter_start, promoter_end, tss):
     """
     Identify GTRD metaclusters which occur within the defined promoter region.
@@ -2252,6 +2350,14 @@ def main():
             all_pwms_loglikelihood_dict_filename = os.path.join(script_dir, 'data/all_pwms_loglikelihood_dict.reduced.msg')
             all_pwms_loglikelihood_dict = load_msgpack(all_pwms_loglikelihood_dict_filename)
 
+            # load GERP locations
+            gerp_conservation_locations_dict_filename = os.path.join(script_dir, 'data/homo_sapiens.gerp_conservation.locations_dict.e93.msg')
+            gerp_conservation_locations_dict = load_msgpack(gerp_conservation_locations_dict_filename)
+
+            # load GERP conservation weights
+            gerp_conservation_weight_dict_filename = os.path.join(script_dir, 'data/homo_sapiens.gerp_conservation.weight_dict.e93.msg')
+            gerp_conservation_weight_dict = load_msgpack(gerp_conservation_weight_dict_filename)
+
             # load human CAGE locs occuring near promoters
             cage_dict_filename = os.path.join(script_dir, 'data/cage.promoters.grch38.2000.genomic_coords.msg')
             cage_dict = load_msgpack(cage_dict_filename)
@@ -2371,11 +2477,12 @@ def main():
                     converted_reg_dict = reg_position_translate(tss,regulatory_decoded,promoter_start,promoter_end,strand,promoter_before_tss,promoter_after_tss)
 
                     # conservation
+                    converted_gerps_in_promoter = gerp_positions_translate(target_dir, gerp_conservation_locations_dict, chromosome, strand, promoter_start, promoter_end, tss)
                     conservation = alignment_conservation(cleaned_aligned_filename)
 
                     # identify information content of each column of the alignment
     ##                info_content_dict = alignment_info_content(cleaned_aligned_filename)
-                    info_content_dict = alignment_summary(alignment)
+##                    info_content_dict = alignment_summary(alignment)
                     cpg_list = CpG(cleaned_aligned_filename)
 
                     # identify CAGEs in proximity to Ensembl TSS, convert for plotting
@@ -2398,7 +2505,7 @@ def main():
                     
                     # sort through scores, identify hits in target_species supported in other species
                     local_start = time.time()
-                    cluster_dict, cage_correlations_hit_tf_dict = find_clusters(alignment, info_content_dict, target_species, tfbss_found_dict, cleaned_aligned_filename, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
+                    cluster_dict, cage_correlations_hit_tf_dict = find_clusters(alignment, target_species, chromosome, tfbss_found_dict, cleaned_aligned_filename, converted_gerps_in_promoter, gerp_conservation_weight_dict,  converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
                     
                     tfbss_found_dict.clear()
                     
