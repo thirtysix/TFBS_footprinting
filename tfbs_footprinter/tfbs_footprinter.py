@@ -1181,7 +1181,7 @@ def gerp_weights_summing(transcript_id, chromosome, target_species_hit, gerp_con
     motif_start = target_species_hit[6]
     motif_end = target_species_hit[7]
     tf_len = len(target_species_hit[2])
-
+    gerp_weights_sum = 0
     dists = []
     for converted_gerp_in_promoter in converted_gerps_in_promoter:
         converted_gerp_in_promoter_start = converted_gerp_in_promoter[0]
@@ -1194,8 +1194,6 @@ def gerp_weights_summing(transcript_id, chromosome, target_species_hit, gerp_con
 
         if best_dist == 0:
             gerp_weights_sum = gerp_conservation_weight_dict[chromosome][str(tf_len)][best_dist]
-        else:
-            gerp_weights_sum = 0
 
     return gerp_weights_sum
 
@@ -1983,7 +1981,7 @@ def atac_pos_translate(atac_seq_dict, chromosome, promoter_start, promoter_end, 
     return converted_atac_seqs_in_promoter
     
 
-def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, conservation, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, cage_correlations_hit_tf_dict):
+def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, converted_gerps_in_promoter, conservation, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, cage_correlations_hit_tf_dict):
     """
     Plot the predicted TFBSs, onto a 5000 nt promoter graph, which possess support above the current strand threshold.
     ['binding_prot', 'species', 'motif', 'strand', 'start', 'end', 'TSS-relative start', 'TSS-relative end', 'frame score', 'p-value', 'pos in align.', 'combined affinity score', 'support']
@@ -2097,6 +2095,23 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
     # Conservation plot
     ax2.plot(range(-1 * alignment_len + promoter_after_tss, promoter_after_tss), conservation, color='0.55')
     ax2.set_ylim(0, 1)
+    
+    # Add GERP bars 
+    for converted_gerp_in_promoter in converted_gerps_in_promoter:
+        converted_gerp_start = converted_gerp_in_promoter[0]
+        converted_gerp_end = converted_gerp_in_promoter[1]
+        alpha_gradient = 1
+        gerp_height = 1
+        
+        gerp_x_series = []
+        gerp_y_series = []
+        gerp_midpoint = float(converted_gerp_start + converted_gerp_end)/2
+        gerp_x_series.append(gerp_midpoint)
+        gerp_y_series.append(gerp_height)
+
+        gerp_width = abs(converted_gerp_start - converted_gerp_end)
+        ax2.bar(gerp_x_series, gerp_y_series, facecolor='black', edgecolor='black', alpha=alpha_gradient, align = 'center', width=gerp_width)
+    
     
     # CpG plot
     # [1 C, 1 if G, 1 if CPG, CorG, num_cpg, obs2exp]
@@ -2522,7 +2537,7 @@ def main():
 
                     # plot the top x target_species hits
                     if len(top_x_greatest_hits_dict) > 0:
-                        plot_promoter(transcript_id,alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, conservation, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, cage_correlations_hit_tf_dict)
+                        plot_promoter(transcript_id,alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, converted_gerps_in_promoter, conservation, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, cage_correlations_hit_tf_dict)
 
             logging.info("\n")
         total_time_end = time.time()
