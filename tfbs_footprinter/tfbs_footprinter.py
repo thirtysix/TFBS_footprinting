@@ -349,7 +349,7 @@ def ensemblrest(query_type, options, output_type, ensembl_id=None, log=False):
     full_query = server + query_type + ensembl_id + options
 
     if log:
-        logging.info(" ".join([full_query]))
+        logging.info(" ".join(["Ensembl REST query made:", full_query]))
 
     if output_type == 'json':
         resp, json_data = http.request(full_query, method="GET")
@@ -373,12 +373,12 @@ def ensemblrest_rate(resp):
     if int(resp['x-ratelimit-remaining']) == 0:       
         if 'Retry-After' in resp:
             sleep_time = int(resp['Retry-After'])
-            logging.warning(" ".join(["Ensembl REST (Retry-After) requests sleeping for", str(sleep_time)]))
+            logging.warning(" ".join(["Ensembl REST (Retry-After) requests sleeping for:", str(sleep_time)]))
             sleep(sleep_time)
             
         else:
             sleep_time = 40
-            logging.warning(" ".join(["Ensembl REST requests sleeping for", str(sleep_time)]))
+            logging.warning(" ".join(["Ensembl REST requests sleeping for:", str(sleep_time)]))
             sleep(sleep_time)
 
 
@@ -1574,9 +1574,6 @@ def alignment_tools(ensembl_aligned_filename, cleaned_aligned_filename, species_
 def transfabulator(transcript, transcript_dict_filename):
     """
     Given a transcript ID, retrieve Ensembl descriptive data for that transcript.
-    Write json data to file.
-    Based on user-defined values for target region (referenced to TSS),
-    calculate genomic coordinates of target region.
     """
 
     retrieve_transcript_data = True
@@ -1591,21 +1588,23 @@ def transfabulator(transcript, transcript_dict_filename):
     # or contains no data.
     if retrieve_transcript_data:
         # Set parameters for retrieving Ensembl data via REST
-        transcript_dict = {}
         query_type = '/lookup/id/'
         options = '?feature=transcript;content-type=application/json'
 
         # populate 'transcript_dict' dictionary with sub-dictionaries.
         # key[transcript_id] = {chromosome, strand, start, end} for each ensembl transcript id
         decoded_json_description = ensemblrest(query_type, options, 'json', transcript, log=True)
+        decoded_json_description = {k.lower():v for k,v in decoded_json_description.iteritems()}
         
-
     return decoded_json_description
 
 
 def transcript_data(decoded_json_description, transcript_dict_filename, promoter_before_tss, promoter_after_tss):
     """
     The retrieved transcript data is assumed complete, extract important data.
+    Write json data to file.
+    Based on user-defined values for target region (referenced to TSS),
+    calculate genomic coordinates of target region.
     """
 
     # Extract position data
@@ -1614,7 +1613,7 @@ def transcript_data(decoded_json_description, transcript_dict_filename, promoter
     chr_end = decoded_json_description['end']
     strand = decoded_json_description['strand']
     transcript_name = decoded_json_description['display_name']
-    ens_gene_id = decoded_json_description['Parent']
+    ens_gene_id = decoded_json_description['parent']
     target_species = decoded_json_description['species']
 
     dump_json(transcript_dict_filename, decoded_json_description)
@@ -2474,6 +2473,29 @@ def species_specific_data(target_species, species_specific_data_dir):
 
     return gerp_conservation_locations_dict, gerp_conservation_weight_dict, cage_dict, cage_dist_weights_dict, cage_correlations_dict, cage_corr_weights_dict, cage_keys_dict, jasparTFs_transcripts_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, gtex_variants, gtex_weights_dict, gtrd_metaclusters_dict, atac_seq_dict
 
+
+def test_transcript_id(decoded_json_description, transcript_id):
+    """     
+    Test if the dictionary for the target transcript id:
+    Indicates it is a transcript.
+    Doesn't contain errors/Is complete.
+    """
+
+    transcript_id_pass = False
+
+    if 'error' not in decoded_json_description:
+        if 'object_type' in decoded_json_description:
+            if decoded_json_description['object_type'].lower() == 'transcript':
+                transcript_id_pass = True
+            else:
+                logging.warning(" ".join([transcript_id, "This input does not appear to be a valid Ensembl transcript ID.  Ensembl REST defines it as:", decoded_json_description['object_type']]))
+        else:
+            logging.warning(" ".join([transcript_id, "This input does not appear to be a valid Ensembl transcript ID.  Please check it for errors."]))
+    else:
+        logging.warning(" ".join(["Ensembl REST responds with error:", decoded_json_description['error']]))
+
+    return transcript_id_pass
+
 ################################################################################
 # Initiating Variables #########################################################
 ################################################################################
@@ -2503,10 +2525,9 @@ def main():
             directory_creator(output_dir)
 
             # begin timing and logging
-            logging.basicConfig(filename=os.path.join(os.path.dirname(output_dir), 'TFBS_footprinter.log'), level=logging.INFO, format='%(asctime)s:    %(message)s')
+            logging.basicConfig(filename=os.path.join(os.path.dirname(output_dir), 'TFBS_footprinter.log'), level=logging.INFO, format='%(asctime)s:    [%(levelname)s]    %(message)s')
             logging.info(" ".join(["***NEW SET OF ANALYSES HAS BEGUN***"]))
             
-
             # analysis variables
             # non-species-specific
             # dictionary of thresholds for each TF
@@ -2529,7 +2550,7 @@ def main():
         
         for i, args_list in enumerate(args_lists):
             args, transcript_ids_filename, transcript_id, target_tfs_filename, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, pval = args_list
-            logging.info(" ".join(["***ANALYSIS OF A NEW TRANSCRIPT HAS BEGUN***:", transcript_id]))
+            logging.info(" ".join(["***ANALYSIS OF A NEW TRANSCRIPT HAS BEGUN:", transcript_id]))
             logging.info(" ".join(["Arguments used in this run:", str(args_list)]))
 
             # target dir naming
@@ -2537,21 +2558,18 @@ def main():
             target_dir_name = "_".join([transcript_id+start_end, species_group, coverage, str(pval)])
             target_dir = os.path.join(output_dir, target_dir_name)
 
-
-
             # identify if the target transcript id exists in Ensembl
             transcript_dict_filename = os.path.join(target_dir, "transcript_dict.json")
             decoded_json_description = transfabulator(transcript_id, transcript_dict_filename)
-            
-            if 'error' in decoded_json_description:
-                logging.warning(" ".join([decoded_json_description['error']]))
-                continue
+            transcript_id_pass = test_transcript_id(decoded_json_description, transcript_id)
 
             # parse target transcript id data from successful retrieval, and continue
-            if "error" not in decoded_json_description:
-                directory_creator(target_dir)
+            if transcript_id_pass:
                 target_species, transcript_name, ens_gene_id, chromosome, tss, strand, promoter_start, promoter_end = transcript_data(decoded_json_description, transcript_dict_filename, promoter_before_tss, promoter_after_tss)
-##                logging.info(" ".join([transcript_id]))
+
+                # create target output dir 
+                directory_creator(target_dir)
+                logging.info(" ".join(["Results will be output to:", target_dir]))
                 
                 # species-specific
                 species_specific_data_dir = os.path.join(script_dir, 'data', target_species)
@@ -2569,26 +2587,12 @@ def main():
                     target_tfs_list = compare_tfs_list_jaspar(target_tfs_list, TFBS_matrix_dict)
 
 
-##            decoded_json_description = ensemblrest('/archive/id/', '?content-type=application/json', 'json', transcript_id, log=True)
-##
-##            if 'error' in decoded_json_description:
-##                logging.warning(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), decoded_json_description['error']]))
-##                continue
-##            
-##            if 'error' not in decoded_json_description:
-##                start_end = "("+"_".join([str(promoter_before_tss), str(promoter_after_tss)])+")"
-##                target_dir_name = "_".join([transcript_id+start_end, species_group, coverage, str(pval)])
-##                target_dir = os.path.join(output_dir, target_dir_name)
-##                directory_creator(target_dir)
-##                
-##                transcript_dict, target_species, transcript_name, ens_gene_id, chromosome, tss, strand, promoter_start, promoter_end = transfabulator(transcript_id, transcript_dict_filename, promoter_before_tss, promoter_after_tss)
-
                 # filenames for alignment and ensembl regulatory data
                 ensembl_aligned_filename = os.path.join(target_dir, "alignment_uncleaned.fasta")
                 cleaned_aligned_filename = os.path.join(target_dir, "alignment_cleaned.fasta")
                 alignment = alignment_tools(ensembl_aligned_filename, cleaned_aligned_filename, species_group, target_species, chromosome, strand, promoter_start, promoter_end, coverage)
 
-                # continue if there is an alignment, from Ensembl and after cleaning
+                # continue if there is an alignment from Ensembl, and after cleaning
                 if len(alignment) > 0:
 
                     target_species_row = alignment[0]
