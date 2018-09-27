@@ -334,7 +334,7 @@ def is_online():
         return True
 
     except:
-        logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "System does not appear to be connected to the internet."]))
+        logging.info(" ".join(["System does not appear to be connected to the internet."]))
         return False
         
 
@@ -349,7 +349,7 @@ def ensemblrest(query_type, options, output_type, ensembl_id=None, log=False):
     full_query = server + query_type + ensembl_id + options
 
     if log:
-        logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), full_query]))
+        logging.info(" ".join([full_query]))
 
     if output_type == 'json':
         resp, json_data = http.request(full_query, method="GET")
@@ -373,12 +373,12 @@ def ensemblrest_rate(resp):
     if int(resp['x-ratelimit-remaining']) == 0:       
         if 'Retry-After' in resp:
             sleep_time = int(resp['Retry-After'])
-            logging.warning(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "Ensembl REST (Retry-After) requests sleeping for", str(sleep_time)]))
+            logging.warning(" ".join(["Ensembl REST (Retry-After) requests sleeping for", str(sleep_time)]))
             sleep(sleep_time)
             
         else:
             sleep_time = 40
-            logging.warning(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "Ensembl REST requests sleeping for", str(sleep_time)]))
+            logging.warning(" ".join(["Ensembl REST requests sleeping for", str(sleep_time)]))
             sleep(sleep_time)
 
 
@@ -429,7 +429,7 @@ def compare_tfs_list_jaspar(target_tfs_list, TFBS_matrix_dict):
 
     target_tfs_list = list(set(jaspar_dict_keys).intersection(target_tfs_list))
     if len(erroneous) > 0:
-        logging.warning(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "the following tf ids are not in the Jaspar database:", ", ".join(erroneous)]))
+        logging.warning(" ".join(["the following tf ids are not in the Jaspar database:", ", ".join(erroneous)]))
 
     return target_tfs_list
 
@@ -453,7 +453,7 @@ def experimentalDataUpdater(exp_data_update):
         experimental_data_down_loc = os.path.join(script_dir,'data.tar.gz')
 ##        current_versions_file = os.path.join(experimental_data_dir, "experimental_data.current_versions.json")
         print "Downloading the most current experimental data"
-        logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "Downloading most current experimental data."]))
+        logging.info(" ".join(["Downloading most current experimental data."]))
         try:
             wget.download(current_version_url, out=experimental_data_dir)
             wget.download(experimental_data_url, out=experimental_data_down_loc)
@@ -461,7 +461,7 @@ def experimentalDataUpdater(exp_data_update):
             tar.extractall(experimental_data_dir)
 
         except:
-            logging.warning(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "Error in downloading experimental data.  Check your internet connection."]))
+            logging.warning(" ".join(["Error in downloading experimental data.  Check your internet connection."]))
 
         
 
@@ -506,7 +506,7 @@ def experimentalDataUpdater_beta():
     # download the most current experimental data
     if update_required:
         print "Downloading the most current experimental data"
-        logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "Downloading most current experimental data."]))
+        logging.info(" ".join(["Downloading most current experimental data."]))
 
         try:
             wget.download(current_version_url, out=experimental_data_dir)
@@ -515,7 +515,7 @@ def experimentalDataUpdater_beta():
             tar.extractall(experimental_data_dir)
 
         except:
-            logging.warning(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "Error in downloading experimental data.  Check your internet connection."]))
+            logging.warning(" ".join(["Error in downloading experimental data.  Check your internet connection."]))
 
 ##        os.remove(experimental_data_down_loc)
         
@@ -616,7 +616,7 @@ def tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, t
 
     # Determine if the analysis has been done already, load results if so
     if os.path.isfile(tfbss_found_dict_outfilename):
-        logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "tfbss_found_dict already exists: loading"]))
+        logging.info(" ".join(["tfbss_found_dict already exists: loading"]))
         tfbss_found_dict = load_json(tfbss_found_dict_outfilename)
                                                     
     # If results don't already exist, time to party
@@ -711,7 +711,7 @@ def tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, t
         dump_json(tfbss_found_dict_outfilename, tfbss_found_dict)
 
     end_time = time.time()
-    logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "total time for this transcript:", str(end_time - start_time), "seconds"]))
+    logging.info(" ".join(["total time for this transcript:", str(end_time - start_time), "seconds"]))
 
     return tfbss_found_dict
 
@@ -1155,7 +1155,8 @@ def metacluster_weights_summing(transcript_id, target_species_hit, metacluster_o
     Retrieve a log-likelihood score for this from the pre-existing dictionary.
     """  
 
-    num_ovelapping_metaclusters = 0     
+    num_ovelapping_metaclusters = 0
+    metacluster_weights_sum = 0
 
     motif_start = target_species_hit[6]
     motif_end = target_species_hit[7]
@@ -1173,6 +1174,7 @@ def metacluster_weights_summing(transcript_id, target_species_hit, metacluster_o
         metacluster_weights_sum = metacluster_overlap_weights_dict[num_ovelapping_metaclusters]
     else:
         print "metacluster overlap sum not in weight dict"
+        logging.warning(" ".join(["metacluster overlap sum not in weight dict"]))
 
     return metacluster_weights_sum
 
@@ -1353,7 +1355,7 @@ def retrieve_genome_aligned(species_group, target_species, chromosome, strand, p
         # remove those entries which are computed ancestral species
         alignment = [x for x in alignment_decoded[0]['alignments'] if 'Ancestor' not in x['seq_region']]
     else:
-        logging.warning(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), alignment_decoded['error']]))
+        logging.warning(" ".join([alignment_decoded['error']]))
         if alignment_decoded['error'].lower() == "no alignment available for this region":
             query_type = "/sequence/region/"
             pre_options = target_species + "/" + chromosome + ":" + str(promoter_start) + "-" + str(promoter_end) + ":" + str(strand)
@@ -1499,7 +1501,7 @@ def alignment_tools(ensembl_aligned_filename, cleaned_aligned_filename, species_
 
         # Uncleaned alignment file still doesn't exist (or size is zero): note in logfile.
         else:
-            logging.warning(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "No ensembl alignment, or size is zero"]))
+            logging.warning(" ".join(["No ensembl alignment, or size is zero"]))
             alignment = []
             
     # Cleaned alignment file exists and size is not zero: load cleaned alignment.
@@ -1581,7 +1583,7 @@ def transfabulator(transcript, transcript_dict_filename):
     # load transcript position data from json file if it already exists
     if os.path.isfile(transcript_dict_filename):
         if os.path.getsize(transcript_dict_filename) != 0:
-            logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "transcript_dict already exists: loading"]))
+            logging.info(" ".join(["transcript_dict already exists: loading"]))
             decoded_json_description = load_json(transcript_dict_filename)
             retrieve_transcript_data = False
 
@@ -1641,7 +1643,7 @@ def retrieve_regulatory(chromosome, strand, promoter_start, promoter_end, regula
 
     # determine if the regulatory data has already been retrieved, if so load, if not retrieve.
     if os.path.isfile(regulatory_decoded_filename):
-        logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "regulatory_decoded already exists: loading"]))
+        logging.info(" ".join(["regulatory_decoded already exists: loading"]))
         regulatory_decoded = load_json(regulatory_decoded_filename)
         
     else:
@@ -2496,6 +2498,15 @@ def main():
 
         if len(args_lists) > 0:
 
+            # Create directory for results
+            output_dir = os.path.join(curdir, "tfbs_results")
+            directory_creator(output_dir)
+
+            # begin timing and logging
+            logging.basicConfig(filename=os.path.join(os.path.dirname(output_dir), 'TFBS_footprinter.log'), level=logging.INFO, format='%(asctime)s:    %(message)s')
+            logging.info(" ".join(["***NEW SET OF ANALYSES HAS BEGUN***"]))
+            
+
             # analysis variables
             # non-species-specific
             # dictionary of thresholds for each TF
@@ -2517,35 +2528,30 @@ def main():
             all_pwms_loglikelihood_dict = load_msgpack(all_pwms_loglikelihood_dict_filename)
         
         for i, args_list in enumerate(args_lists):
-##            args, transcript_ids_filename, transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, pval = args_list
             args, transcript_ids_filename, transcript_id, target_tfs_filename, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, pval = args_list
-
-            # Create directory for results
-            output_dir = os.path.join(curdir, "tfbs_results")
-            directory_creator(output_dir)
+            logging.info(" ".join(["***ANALYSIS OF A NEW TRANSCRIPT HAS BEGUN***:", transcript_id]))
+            logging.info(" ".join(["Arguments used in this run:", str(args_list)]))
 
             # target dir naming
             start_end = "("+"_".join([str(promoter_before_tss), str(promoter_after_tss)])+")"
             target_dir_name = "_".join([transcript_id+start_end, species_group, coverage, str(pval)])
             target_dir = os.path.join(output_dir, target_dir_name)
 
-            # begin timing and logging
-            logging.basicConfig(filename=os.path.join(os.path.dirname(output_dir), 'TFBS_footprinter.log'),level=logging.DEBUG)
-            logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), str(args_list)]))
+
 
             # identify if the target transcript id exists in Ensembl
             transcript_dict_filename = os.path.join(target_dir, "transcript_dict.json")
             decoded_json_description = transfabulator(transcript_id, transcript_dict_filename)
             
             if 'error' in decoded_json_description:
-                logging.warning(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), decoded_json_description['error']]))
+                logging.warning(" ".join([decoded_json_description['error']]))
                 continue
 
             # parse target transcript id data from successful retrieval, and continue
             if "error" not in decoded_json_description:
                 directory_creator(target_dir)
                 target_species, transcript_name, ens_gene_id, chromosome, tss, strand, promoter_start, promoter_end = transcript_data(decoded_json_description, transcript_dict_filename, promoter_before_tss, promoter_after_tss)
-                logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), transcript_id]))
+##                logging.info(" ".join([transcript_id]))
                 
                 # species-specific
                 species_specific_data_dir = os.path.join(script_dir, 'data', target_species)
@@ -2641,9 +2647,8 @@ def main():
                     if len(top_x_greatest_hits_dict) > 0:
                         plot_promoter(transcript_id,alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, converted_gerps_in_promoter, conservation, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, cage_correlations_hit_tf_dict)
 
-            logging.info("\n")
         total_time_end = time.time()
-        logging.info(" ".join([time.strftime("%Y-%m-%d %H:%M:%S"), "total time for", str(len(args_lists)), "transcripts:", str(total_time_end - total_time_start), "seconds"]) + "\n\n")
+        logging.info(" ".join(["Total time for", str(len(args_lists)), "transcripts:", str(total_time_end - total_time_start), "seconds"]) + "\n\n")
 
     else:
         print "System does not appear to be connected to the internet.  Exiting TFBS_footprinter."
