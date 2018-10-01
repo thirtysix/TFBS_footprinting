@@ -172,7 +172,7 @@ def get_args():
             parsed_arg_lines = file_to_datalist(transcript_ids_filename)[1:]
             
             for i, parsed_arg_line in enumerate(parsed_arg_lines):
-                if len(parsed_arg_line) < 9:
+                if len(parsed_arg_line) < 8:
                     print "Incomplete arguments in input file on line", i
                     
                 else:
@@ -776,7 +776,7 @@ def unaligned2aligned_indexes(cleaned_aligned_filename):
     return unaligned2aligned_index_dict
 
 
-def find_clusters(alignment, target_species, chromosome, tfbss_found_dict, cleaned_aligned_filename, converted_gerps_in_promoter, gerp_conservation_weight_dict, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):
+def find_clusters(ens_gene_id, chr_start, chr_end, alignment, target_species, chromosome, tfbss_found_dict, cleaned_aligned_filename, converted_gerps_in_promoter, gerp_conservation_weight_dict, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict, gtex_variants, gene_len):
     """
     For each target species hit:
     Identify the highest score for each species within the locality threshold.
@@ -804,7 +804,7 @@ def find_clusters(alignment, target_species, chromosome, tfbss_found_dict, clean
             # datasets only available for homo sapiens
             if target_species == "homo_sapiens":
                 cage_weights_sum = cage_weights_summing(transcript_id, target_species_hit, cage_dist_weights_dict, cage_dict, converted_cages)
-                eqtls_weights_sum = eqtls_weights_summing(target_species_hit, converted_eqtls, gtex_weights_dict)
+                eqtls_weights_sum = eqtls_weights_summing(ens_gene_id, target_species_hit, converted_eqtls, gtex_weights_dict, chr_start, chr_end, gtex_variants, tf_len, gene_len)
                 atac_weights_sum = atac_weights_summing(transcript_id, target_species_hit, atac_dist_weights_dict, converted_atac_seqs_in_promoter)
                 metacluster_weights_sum = metacluster_weights_summing(transcript_id, target_species_hit, metacluster_overlap_weights_dict, converted_metaclusters_in_promoter)
                 corr_weight_sum, cage_correlations_hit_tf_dict = cage_correlations_summing(target_species_hit, transcript_id, cage_dict, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict, cage_correlations_hit_tf_dict)
@@ -969,29 +969,39 @@ def find_clusters(alignment, target_species, chromosome, tfbss_found_dict, clean
 ##    
 
 
-def eqtls_weights_summing(target_species_hit, converted_eqtls, gtex_weights_dict):
+def eqtls_weights_summing(ens_gene_id, target_species_hit, converted_eqtls, gtex_weights_dict, chr_start, chr_end, gtex_variants, tf_len, gene_len):
     """
     Identify if any of the eQTLs associated with this gene overlap this predicted TFBS.
     Retrieve the log-likelihood scores for all of them.
+    Fix.
     """
-
+  
     eqtl_weights = []
 
-    if len(converted_eqtls) > 0:
+    if len(converted_eqtls) > 0:        
+        transcript_len  = float(chr_end - chr_start)
+
+        # determine size of search space, and probability of observing an eQTL in this gene.
+        # GTEx searches for variants which occur over the span of the gene + 1,000,000 nt upstream+downstream.
+        eqtl_search_space = 2000000 + gene_len
+        associated_gtx_eqtls = gtex_variants[ens_gene_id]
+        variant_count = len(associated_gtx_eqtls) * 1.
+        eqtl_occurrence_log_likelihood = -1 * math.log(((tf_len * variant_count)/(eqtl_search_space-tf_len)) * (transcript_len/gene_len), 2)
+
+        # determine the weight score for likelihood of this magnitude eQTL.
         motif_start = target_species_hit[6]
         motif_end = target_species_hit[7]
 
         for converted_eqtl in converted_eqtls:
             converted_eqtl_start = converted_eqtl[0]
             converted_eqtl_end = converted_eqtl[1]
-##            converted_eqtl_score = converted_eqtl[2]
             converted_eqtl_score_mag = abs(converted_eqtl[2])
 
             overlap = overlap_range([motif_start, motif_end], [converted_eqtl_start, converted_eqtl_end])
 
             if len(overlap) > 0:
                 eqtl_weight = gtex_weights_dict[converted_eqtl_score_mag]
-                eqtl_weights.append(eqtl_weight)
+                eqtl_weights.append(eqtl_weight + eqtl_occurrence_log_likelihood)
 
     eqtl_weights_sum = sum(eqtl_weights)
 
@@ -1337,35 +1347,40 @@ def retrieve_genome_aligned(species_group, target_species, chromosome, strand, p
     """
     Takes as input target_species CCDS start position and size of promoter to be extracted.  Retrieves genome aligned,
     corresponding regions in all orthologs.
+    ***Alignment no longer necessary as the use of pre-computed GERP scores means that no conservation calculation needs to be made.
+    Additionally, the newest implementation of Ensembl REST alignment will not retrieve target species sequence,
+    if there is no alignment with other species at that location.
+    For example, a request for homo_sapiens alignment from chr1:1-10,000 will only return the locations where an alignment
+    exists with the target species group (e.g. mammals_low).  This may only exist at chr1:2000-9500.
     """
 
-    # Retrieve alignment if alignment FASTA does not already exist  
-    query_type = "/alignment/block/region/"
-    pre_options = target_species + "/" + chromosome + ":" + str(promoter_start) + "-" + str(promoter_end) + ":" + str(strand)   
+##    # Retrieve alignment if alignment FASTA does not already exist  
+##    query_type = "/alignment/block/region/"
+##    pre_options = target_species + "/" + chromosome + ":" + str(promoter_start) + "-" + str(promoter_end) + ":" + str(strand)   
+##
+##    if coverage == "low":
+##        coverage_str = "EPO_LOW_COVERAGE"
+##    else:
+##        coverage_str = "EPO"
+##        
+##    options = pre_options + "?method=" + coverage_str + ";compact=1;content-type=application/json;species_set_group=" + species_group
+##    alignment_decoded = ensemblrest(query_type, options, 'json', "", log=True)
+##
+##    if 'error' not in alignment_decoded:            
+##        # remove those entries which are computed ancestral species
+##        alignment = [x for x in alignment_decoded[0]['alignments'] if 'Ancestor' not in x['seq_region']]
+##    else:
+##        logging.warning(" ".join([alignment_decoded['error']]))
+##        if alignment_decoded['error'].lower() == "no alignment available for this region":
+    query_type = "/sequence/region/"
+    pre_options = target_species + "/" + chromosome + ":" + str(promoter_start) + "-" + str(promoter_end) + ":" + str(strand)
+    options = pre_options + "?content-type=application/json"
+    target_only_decoded = ensemblrest(query_type, options, 'json', "", log=True)
+    target_only_decoded['species'] = target_species
+    alignment = [target_only_decoded]
 
-    if coverage == "low":
-        coverage_str = "EPO_LOW_COVERAGE"
-    else:
-        coverage_str = "EPO"
-        
-    options = pre_options + "?method=" + coverage_str + ";compact=1;content-type=application/json;species_set_group=" + species_group
-    alignment_decoded = ensemblrest(query_type, options, 'json', "", log=True)
-
-    if 'error' not in alignment_decoded:            
-        # remove those entries which are computed ancestral species
-        alignment = [x for x in alignment_decoded[0]['alignments'] if 'Ancestor' not in x['seq_region']]
-    else:
-        logging.warning(" ".join([alignment_decoded['error']]))
-        if alignment_decoded['error'].lower() == "no alignment available for this region":
-            query_type = "/sequence/region/"
-            pre_options = target_species + "/" + chromosome + ":" + str(promoter_start) + "-" + str(promoter_end) + ":" + str(strand)
-            options = pre_options + "?content-type=application/json"
-            target_only_decoded = ensemblrest(query_type, options, 'json', "", log=True)
-            target_only_decoded['species'] = target_species
-            alignment = [target_only_decoded]
-
-        else:
-            alignment = []
+##        else:
+##            alignment = []
 
     return alignment
 
@@ -1599,7 +1614,7 @@ def transfabulator(transcript, transcript_dict_filename):
     return decoded_json_description
 
 
-def transcript_data(decoded_json_description, transcript_dict_filename, promoter_before_tss, promoter_after_tss):
+def transcript_data_retrieve(decoded_json_description, transcript_dict_filename, promoter_before_tss, promoter_after_tss):
     """
     The retrieved transcript data is assumed complete, extract important data.
     Write json data to file.
@@ -1630,7 +1645,28 @@ def transcript_data(decoded_json_description, transcript_dict_filename, promoter
         promoter_start = tss + 1 - promoter_after_tss
         promoter_end = tss + promoter_before_tss
 
-    return target_species, transcript_name, ens_gene_id, chromosome, tss, strand, promoter_start, promoter_end
+    return target_species, transcript_name, ens_gene_id, chromosome, tss, strand, promoter_start, promoter_end, chr_start, chr_end
+
+
+def gene_data_retrieve(ens_gene_id):
+    """
+    Retrieve gene data for the parent gene of the target transcript.
+    """
+
+    # determine likelihood of overlapping an eQTL at all.
+    # Set parameters for retrieving Ensembl data via REST
+    
+    query_type = '/lookup/id/'
+    options = '?feature=transcript;content-type=application/json'
+
+    # retrieve_gene_len
+    decoded_json_description = ensemblrest(query_type, options, 'json', ens_gene_id, log=True)
+    decoded_json_description = {k.lower():v for k,v in decoded_json_description.iteritems()}
+    gene_start = decoded_json_description['start']
+    gene_end = decoded_json_description['end']
+    gene_len = gene_end - gene_start
+
+    return gene_len
 
 ################################################################################
 # Regulatory & Conservation Features ###########################################
@@ -1709,29 +1745,29 @@ def reg_position_translate(tss,regulatory_decoded,promoter_start,promoter_end,st
     return converted_reg_dict
 
 
-def alignment_conservation(aligned_filename):
-    """
-    Identify basic conservation of DNA sequence in the alignment.
-    """
-
-    alignment = AlignIO.read(aligned_filename, "fasta")
-    target_species_row = alignment[0]
-    species_num = float(len(alignment))
-    conservation = []
-    for i in range(0, len(target_species_row)):
-        
-        target_species_nuc = target_species_row[i]
-        if target_species_nuc != "-":
-            alignment_col = alignment[:,i]
-            common_char = collections.Counter(alignment_col).most_common()[0][0]
-            char_count = collections.Counter(alignment_col).most_common()[0][1]
-            if common_char != '-':
-                col_conservation = char_count/species_num
-            else:
-                col_conservation = alignment_col.count(target_species_nuc)/species_num
-            conservation.append(col_conservation)
-
-    return conservation
+##def alignment_conservation(aligned_filename):
+##    """
+##    Identify basic conservation of DNA sequence in the alignment.
+##    """
+##
+##    alignment = AlignIO.read(aligned_filename, "fasta")
+##    target_species_row = alignment[0]
+##    species_num = float(len(alignment))
+##    conservation = []
+##    for i in range(0, len(target_species_row)):
+##        
+##        target_species_nuc = target_species_row[i]
+##        if target_species_nuc != "-":
+##            alignment_col = alignment[:,i]
+##            common_char = collections.Counter(alignment_col).most_common()[0][0]
+##            char_count = collections.Counter(alignment_col).most_common()[0][1]
+##            if common_char != '-':
+##                col_conservation = char_count/species_num
+##            else:
+##                col_conservation = alignment_col.count(target_species_nuc)/species_num
+##            conservation.append(col_conservation)
+##
+##    return conservation
 
 
 def CpG(aligned_filename):
@@ -2055,7 +2091,7 @@ def atac_pos_translate(atac_seq_dict, chromosome, promoter_start, promoter_end, 
     return converted_atac_seqs_in_promoter
     
 
-def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, converted_gerps_in_promoter, conservation, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, cage_correlations_hit_tf_dict):
+def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, converted_gerps_in_promoter, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, cage_correlations_hit_tf_dict):
     """
     Plot the predicted TFBSs, onto a 5000 nt promoter graph, which possess support above the current strand threshold.
     ['binding_prot', 'species', 'motif', 'strand', 'start', 'end', 'TSS-relative start', 'TSS-relative end', 'frame score', 'p-value', 'pos in align.', 'combined affinity score', 'support']
@@ -2167,7 +2203,7 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
             reg_height += 0.5  
 
     # Conservation plot
-    ax2.plot(range(-1 * alignment_len + promoter_after_tss, promoter_after_tss), conservation, color='0.55')
+##    ax2.plot(range(-1 * alignment_len + promoter_after_tss, promoter_after_tss), conservation, color='0.55')
     ax2.set_ylim(0, 1)
     
     # Add GERP bars 
@@ -2317,7 +2353,7 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
     ax1.set_ylabel("Combined Affinity Score", fontsize = 8, labelpad = 0)
     ax1.text(1.005,0.99,'+ strand', verticalalignment='top', transform=ax1.transAxes, rotation='vertical', fontsize=6)
     ax1.text(1.005,.01,'- strand', verticalalignment='bottom', transform=ax1.transAxes, rotation='vertical', fontsize=6)
-    ax2.text(1.01,.5,'Conservation', verticalalignment='center', transform=ax2.transAxes, rotation='vertical', fontsize=6)
+    ax2.text(1.01,.5,'GERP\nConserv.', verticalalignment='center', transform=ax2.transAxes, rotation='vertical', fontsize=6)
     ax3.text(1.01,.5,'CpG\nObs/Exp', verticalalignment='center', transform=ax3.transAxes, rotation='vertical', fontsize=6)
     ax4.text(1.01,.5,'eQTLs', verticalalignment='center', transform=ax4.transAxes, rotation='vertical', fontsize=6)
     ax5.text(1.01,.5,'TFBS\nMeta\nClusters', verticalalignment='center', transform=ax5.transAxes, rotation='vertical', fontsize=6)
@@ -2454,8 +2490,8 @@ def species_specific_data(target_species, species_specific_data_dir):
     cpg_obsexp_weights_dict_keys.sort()
 
     # load GTEx variants
-    gtex_variants_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'gtex_reduced.loc_effect.uniques.grch38.msg']))
     gtex_variants_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'gtex_reduced.loc_effect.uniques.tupled.grch38.msg']))
+    gtex_variants_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'gtex_v7.min_unique.eqtls.grch38.msg']))
     gtex_variants = load_msgpack(gtex_variants_filename)
 
     # load GTEx weights
@@ -2565,11 +2601,12 @@ def main():
 
             # parse target transcript id data from successful retrieval, and continue
             if transcript_id_pass:
-                target_species, transcript_name, ens_gene_id, chromosome, tss, strand, promoter_start, promoter_end = transcript_data(decoded_json_description, transcript_dict_filename, promoter_before_tss, promoter_after_tss)
-
                 # create target output dir 
                 directory_creator(target_dir)
                 logging.info(" ".join(["Results will be output to:", target_dir]))
+                
+                target_species, transcript_name, ens_gene_id, chromosome, tss, strand, promoter_start, promoter_end, chr_start, chr_end = transcript_data_retrieve(decoded_json_description, transcript_dict_filename, promoter_before_tss, promoter_after_tss)
+                gene_len = gene_data_retrieve(ens_gene_id)
                 
                 # species-specific
                 species_specific_data_dir = os.path.join(script_dir, 'data', target_species)
@@ -2605,7 +2642,8 @@ def main():
 
                     # conservation
                     converted_gerps_in_promoter = gerp_positions_translate(target_dir, gerp_conservation_locations_dict, chromosome, strand, promoter_start, promoter_end, tss)
-                    conservation = alignment_conservation(cleaned_aligned_filename)
+##                    conservation = alignment_conservation(cleaned_aligned_filename)
+                    conservation = []
 
                     # identify information content of each column of the alignment
     ##                info_content_dict = alignment_info_content(cleaned_aligned_filename)
@@ -2632,7 +2670,7 @@ def main():
                     
                     # sort through scores, identify hits in target_species supported in other species
                     local_start = time.time()
-                    cluster_dict, cage_correlations_hit_tf_dict = find_clusters(alignment, target_species, chromosome, tfbss_found_dict, cleaned_aligned_filename, converted_gerps_in_promoter, gerp_conservation_weight_dict,  converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
+                    cluster_dict, cage_correlations_hit_tf_dict = find_clusters(ens_gene_id, chr_start, chr_end, alignment, target_species, chromosome, tfbss_found_dict, cleaned_aligned_filename, converted_gerps_in_promoter, gerp_conservation_weight_dict,  converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict, gtex_variants, gene_len)
                     
                     tfbss_found_dict.clear()
                     
@@ -2649,7 +2687,7 @@ def main():
 
                     # plot the top x target_species hits
                     if len(top_x_greatest_hits_dict) > 0:
-                        plot_promoter(transcript_id,alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, converted_gerps_in_promoter, conservation, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, cage_correlations_hit_tf_dict)
+                        plot_promoter(transcript_id,alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, converted_gerps_in_promoter, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, cage_correlations_hit_tf_dict)
 
         total_time_end = time.time()
         logging.info(" ".join(["Total time for", str(len(args_lists)), "transcripts:", str(total_time_end - total_time_start), "seconds"]) + "\n\n")
