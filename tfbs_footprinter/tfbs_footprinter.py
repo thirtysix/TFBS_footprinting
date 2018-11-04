@@ -757,7 +757,7 @@ def tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, t
                                 current_frame_score = round(current_frame_score, 2)
                                 current_frame_score_pvalue = pvals_scores_list
                                 scores_list_sorted = [x[1] for x in pvals_scores_list_sorted]
-                                pval_index = bisect_left(scores_list_sorted, current_frame_score) - 1
+                                pval_index = bisect_left(scores_list_sorted, current_frame_score)
                                 if pval_index >= len(pvals_scores_list_sorted):
                                     pval_index = -1                               
                                 current_frame_score_pvalue = pvals_scores_list_sorted[pval_index][0]
@@ -1251,9 +1251,10 @@ def gerp_weights_summing(transcript_id, chromosome, target_species_hit, gerp_con
         best_dist = dists[0]
 
         # should only overlap be used?
-        if best_dist == 0:
-##        if best_dist in gerp_conservation_weight_dict[chromosome][str(tf_len)]:
-            gerp_weights_sum = gerp_conservation_weight_dict[chromosome][str(tf_len)][best_dist]
+##        if best_dist == 0:
+        if best_dist <=1000:
+            if best_dist in gerp_conservation_weight_dict[chromosome][str(tf_len)]:
+                gerp_weights_sum = gerp_conservation_weight_dict[chromosome][str(tf_len)][best_dist]
 
     return gerp_weights_sum
 
@@ -1813,6 +1814,7 @@ def cage_position_translate(transcript_id,tss,cage_dict,promoter_start,promoter_
             cage_start = cage[3]
             cage_end = cage[4]
             cage_desc = cage[0]
+            cage_desc = cage[6]
 
             if cage_strand == "+":
                 #[promoter_start][cage_start][cage_end][promoter_end][chr_start][TSS>GENE--->][chr_end]
@@ -2225,19 +2227,30 @@ def plot_promoter(transcript_id, alignment, alignment_len, promoter_before_tss, 
    
     # CAGE plot
     cage_height = 1
+
+    cage_labels = []
     for converted_cage in converted_cages:
         converted_cage_start = converted_cage[0]
         converted_cage_end = converted_cage[1]
         description = converted_cage[2]
+        if ".." in description:
+            description = ""
         cage_x_series = []
         cage_y_series = []
         cage_center_point = float(converted_cage_start + converted_cage_end)/2
         cage_x_series.append(cage_center_point)
         cage_y_series.append(cage_height)
+        
 
         cage_width = abs(converted_cage_start - converted_cage_end)
         ax7.bar(cage_x_series, cage_y_series, facecolor='black', edgecolor='black', align = 'center', width=cage_width, label=description)
-    ax7.axes.get_yaxis().set_visible(False)   
+
+        # add label for the CAGE peak
+        plt.text(cage_center_point, cage_height, description, color="red", rotation = 270, fontsize=5, horizontalalignment='center', verticalalignment='top')
+
+    ax7.axes.get_yaxis().set_visible(False)
+
+    
 
     # GTRD plot
     gtrd_height = 1
