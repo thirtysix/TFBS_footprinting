@@ -795,15 +795,47 @@ def PWM_scorer(seq, pwm, pwm_dict, pwm_type):
     if pwm_type == "dinuc":
         motif_dist = len(seq) - 1
         span = 2
-    seq_score = 0.0
+    
 
+    # account for sequences which are non-standard code    
+    non_standard_dict = {'R':['A','G'],
+                         'Y':['C','T'],
+                         'S':['G','C'],
+                         'W':['A','T'],
+                         'K':['G','T'],
+                         'M':['A','C'],
+                         'B':['C','G','T'],
+                         'D':['A','G','T'],
+                         'H':['A','C','T'],
+                         'V':['A','C','G'],
+                         'B':['C','G','T']}
+
+    possible_seqs = []
+    non_standards_in_seq = [x for x in non_standard_dict.keys() if x in seq]
+    if len(non_standards_in_seq) > 0:
+        for non_standard_in_seq in non_standards_in_seq:
+            variant_chars = non_standard_dict[non_standard_in_seq]
+            for variant_char in variant_chars:
+                variant_seq = seq.replace(non_standard_in_seq, variant_char)
+                possible_seqs.append(variant_seq)
+    else:
+        possible_seqs.append(seq)
+    
     # iterate through candidate sequence, and score each mono or dinucleotide
-    for i in range(0, motif_dist):
-        nuc = seq[i:i+span]
-        row = pwm_dict[nuc]
-        score = pwm[row][i]
-        seq_score += score
+    possible_seq_scores = []
+    for possible_seq in possible_seqs:
+        seq_score = 0.0
+        for i in range(0, motif_dist):
+            nuc = possible_seq[i:i+span]
+            row = pwm_dict[nuc]
+            score = pwm[row][i]
+            seq_score += score
+        possible_seq_scores.append(seq_score)
 
+    # use the best score achieved
+    possible_seq_scores.sort()
+    seq_score = possible_seq_scores[-1]
+    
     return seq_score
 
 
@@ -2252,7 +2284,7 @@ def atac_pos_translate(atac_seq_dict, chromosome, strand, promoter_start, promot
     return converted_atac_seqs_in_promoter
     
 
-def plot_promoter(transcript_id, species_group, alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, converted_gerps_in_promoter, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, cage_correlations_hit_tf_dict):
+def plot_promoter(target_species, transcript_id, species_group, alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, converted_gerps_in_promoter, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, cage_correlations_hit_tf_dict):
     """
     Plot the predicted TFBSs, onto a 5000 nt promoter graph, which possess support above the current strand threshold.
     ['binding_prot', 'species', 'motif', 'strand', 'start', 'end', 'TSS-relative start', 'TSS-relative end', 'frame score', 'p-value', 'pos in align.', 'combined affinity score', 'support']
@@ -2482,7 +2514,7 @@ def plot_promoter(transcript_id, species_group, alignment, alignment_len, promot
     ax8.set_xlim(-1, len(top_x_greatest_hits_dict))
 
     # plot title
-    title_str = " ".join([transcript_name, transcript_id])
+    title_str = target_species+"\n"+" ".join([transcript_name, transcript_id])
     fig.text(0.065, 0.5, title_str, horizontalalignment='center', verticalalignment='center', transform=ax1.transAxes, rotation='vertical', fontsize=14)
 
     # Set format of the plot(s)
@@ -2735,7 +2767,7 @@ def main():
 
 ##                    # plot the top x target_species hits
                     if len(top_x_greatest_hits_dict) > 0:
-                        plot_promoter(transcript_id, species_group, alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, converted_gerps_in_promoter, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, cage_correlations_hit_tf_dict)
+                        plot_promoter(target_species, transcript_id, species_group, alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, converted_gerps_in_promoter, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, cage_correlations_hit_tf_dict)
 
         total_time_end = time.time()
         logging.info(" ".join(["Total time for", str(len(args_lists)), "transcripts:", str(total_time_end - total_time_start), "seconds"]) + "\n\n")
