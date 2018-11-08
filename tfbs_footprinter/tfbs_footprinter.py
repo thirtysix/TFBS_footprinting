@@ -2290,17 +2290,69 @@ def plot_promoter(target_species, transcript_id, species_group, alignment, align
     ['binding_prot', 'species', 'motif', 'strand', 'start', 'end', 'TSS-relative start', 'TSS-relative end', 'frame score', 'p-value', 'pos in align.', 'combined affinity score', 'support']
     """
 
-    fig = plt.figure(figsize=(10, 6))
-    
-    ax1 = plt.subplot2grid((20,1),(0,0), rowspan = 6, colspan = 11)
-    ax8 = plt.subplot2grid((20,1),(6,0), rowspan = 2, colspan = 11)
-    ax2 = plt.subplot2grid((20,1),(8,0), sharex=ax1, rowspan = 2, colspan = 11)
-    ax3 = plt.subplot2grid((20,1),(10,0), sharex=ax1, rowspan = 2, colspan = 11)
-    ax4 = plt.subplot2grid((20,1),(12,0), sharex=ax1, rowspan = 2, colspan = 11)
-    ax5 = plt.subplot2grid((20,1),(14,0), sharex=ax1, rowspan = 2, colspan = 11)
-    ax6 = plt.subplot2grid((20,1),(16,0), sharex=ax1, rowspan = 2, colspan = 11)
-    ax7 = plt.subplot2grid((20,1),(18,0), sharex=ax1, rowspan = 2, colspan = 11)
+    if target_species == "homo_sapiens":
+        fig = plt.figure(figsize=(10, 6))
+        ax1 = plt.subplot2grid((20,1),(0,0), rowspan = 6, colspan = 11)
+        ax8 = plt.subplot2grid((20,1),(6,0), rowspan = 2, colspan = 11)
+        ax2 = plt.subplot2grid((20,1),(8,0), sharex=ax1, rowspan = 2, colspan = 11)
+        ax3 = plt.subplot2grid((20,1),(10,0), sharex=ax1, rowspan = 2, colspan = 11)
+        ax4 = plt.subplot2grid((20,1),(12,0), sharex=ax1, rowspan = 2, colspan = 11)
+        ax5 = plt.subplot2grid((20,1),(14,0), sharex=ax1, rowspan = 2, colspan = 11)
+        ax6 = plt.subplot2grid((20,1),(16,0), sharex=ax1, rowspan = 2, colspan = 11)
+        ax7 = plt.subplot2grid((20,1),(18,0), sharex=ax1, rowspan = 2, colspan = 11)
+
+        # Set format of the plot(s)
+        # Hide x-ticks for all plots except the lowest
+        plt.setp(ax1.get_xticklabels(), visible=False)
+        plt.setp(ax2.get_xticklabels(), visible=False)
+        plt.setp(ax3.get_xticklabels(), visible=False)
+        plt.setp(ax4.get_xticklabels(), visible=False)
+        plt.setp(ax5.get_xticklabels(), visible=False)
+        plt.setp(ax6.get_xticklabels(), visible=False)
+        plt.setp(ax8.get_xticklabels(), visible=False)
+
+        # plt + ax labels
+        ax1.text(1.02,.5,'Predicted TFBSs', verticalalignment='center', transform=ax1.transAxes, rotation='vertical', fontsize=8)
+        ax1.set_ylabel("Combined Affinity Score", fontsize = 8, labelpad = 0)
+        ax1.text(1.005,0.99,'+ strand', verticalalignment='top', transform=ax1.transAxes, rotation='vertical', fontsize=6)
+        ax1.text(1.005,.01,'- strand', verticalalignment='bottom', transform=ax1.transAxes, rotation='vertical', fontsize=6)
+        ax2.text(1.01,.5,'GERP\nConserv.\n'+species_group, verticalalignment='center', transform=ax2.transAxes, rotation='vertical', fontsize=5)
+        ax3.text(1.01,.5,'CpG\nObs/Exp', verticalalignment='center', transform=ax3.transAxes, rotation='vertical', fontsize=6)
+        ax4.text(1.01,.5,'eQTLs', verticalalignment='center', transform=ax4.transAxes, rotation='vertical', fontsize=6)
+        ax5.text(1.01,.5,'TFBS\nMeta\nClusters', verticalalignment='center', transform=ax5.transAxes, rotation='vertical', fontsize=6)
+        ax6.text(1.01,.5,'ATAC-Seq', verticalalignment='center', transform=ax6.transAxes, rotation='vertical', fontsize=6)
+        ax7.text(1.01,.5,'CAGE\nPeaks\n(TSSs)', verticalalignment='center', transform=ax7.transAxes, rotation='vertical', fontsize=6)
+        ax8.text(1.01,.5,'TF\nExpress.\nCorr.', verticalalignment='center', transform=ax8.transAxes, rotation='vertical', fontsize=6)
+
+
+
+
+    ### as of now the data for non-human species is limited to predicted TFBSs, conservation, and CpG
+    else:
+        fig = plt.figure(figsize=(10, 6))
+        ax1 = plt.subplot2grid((10,1),(0,0), rowspan = 6, colspan = 11)
+        ax2 = plt.subplot2grid((10,1),(6,0), sharex=ax1, rowspan = 2, colspan = 11)
+        ax3 = plt.subplot2grid((10,1),(8,0), sharex=ax1, rowspan = 2, colspan = 11)
+
+        # Set format of the plot(s)
+        # Hide x-ticks for all plots except the lowest
+        plt.setp(ax1.get_xticklabels(), visible=False)
+        plt.setp(ax2.get_xticklabels(), visible=False)
+
+        # plt + ax labels
+        ax1.text(1.02,.5,'Predicted TFBSs', verticalalignment='center', transform=ax1.transAxes, rotation='vertical', fontsize=8)
+        ax1.set_ylabel("Combined Affinity Score", fontsize = 8, labelpad = 0)
+        ax1.text(1.005,0.99,'+ strand', verticalalignment='top', transform=ax1.transAxes, rotation='vertical', fontsize=6)
+        ax1.text(1.005,.01,'- strand', verticalalignment='bottom', transform=ax1.transAxes, rotation='vertical', fontsize=6)
+        ax2.text(1.01,.5,'GERP\nConserv.\n'+species_group, verticalalignment='center', transform=ax2.transAxes, rotation='vertical', fontsize=5)
+        ax3.text(1.01,.5,'CpG\nObs/Exp', verticalalignment='center', transform=ax3.transAxes, rotation='vertical', fontsize=6)
+
+
+    # plot title
+    title_str = target_species+"\n"+" ".join([transcript_name, transcript_id])
+    fig.text(0.065, 0.5, title_str, horizontalalignment='center', verticalalignment='center', transform=ax1.transAxes, rotation='vertical', fontsize=14)
     mpl.rcParams['axes.linewidth'] = 1.1
+    plt.xlabel("Nucleotide position before TSS", labelpad=5)
     
     # Generate data for each of the greatest_hits and plot corresponding bar
     color_series=['#FFB300','#803E75','#FF6800','#A6BDD7','#C10020','#CEA262','#817066','#007D34','#F6768E','#00538A','#FF7A5C','#53377A','#FF8E00','#B32851','#F4C800','#7F180D','#93AA00','#593315','#F13A13','#232C16']
@@ -2317,7 +2369,7 @@ def plot_promoter(target_species, transcript_id, species_group, alignment, align
     # ref-point
     sorted_by_ca_list = sorted(sorted_by_ca_list, key=itemgetter(12), reverse=True)
     
-    # Choose color and plot TFs
+    ### AX1: Predicted TFBSs
     for sorted_great_hit in sorted_by_ca_list:
         tf_name = sorted_great_hit[0]
 
@@ -2359,7 +2411,7 @@ def plot_promoter(target_species, transcript_id, species_group, alignment, align
     y_range.sort()
     tens_y = int(y_range[-1])/10 + 1
 
-    # Plot bars for Ensembl regulatory information
+    # Ensembl regulatory information
     # All will be horizontally plotted in some shade of red
     if len(converted_reg_dict) > 0:
         alpha_gradient = 1.0
@@ -2383,10 +2435,9 @@ def plot_promoter(target_species, transcript_id, species_group, alignment, align
             alpha_gradient -= alpha_gradient_dict[len(converted_reg_dict)]
             reg_height += 0.5  
 
-    # Conservation plot
-    ax2.set_ylim(0, 1)
+    ax1.axhline(0, color = 'black', linewidth=0.5)
     
-    # Add GERP bars 
+    ### AX2: Add GERP conservation bars 
     for converted_gerp_in_promoter in converted_gerps_in_promoter:
         converted_gerp_start = converted_gerp_in_promoter[0]
         converted_gerp_end = converted_gerp_in_promoter[1]
@@ -2401,8 +2452,13 @@ def plot_promoter(target_species, transcript_id, species_group, alignment, align
 
         gerp_width = abs(converted_gerp_start - converted_gerp_end)
         ax2.bar(gerp_x_series, gerp_y_series, facecolor='black', edgecolor='black', alpha=alpha_gradient, align = 'center', width=gerp_width)
+
+    ax2.set_yticks([0, 1])
+    plt.setp(ax2.get_yticklabels(), fontsize=6)
+    ax2.set_ylim(0, 1)
+
     
-    # CpG plot
+    ### AX3: CpG plot
     # [1 C, 1 if G, 1 if CPG, CorG, num_cpg, obs2exp]
     obs2exp = [x[5] for x in cpg_list]
     ax3.plot(range(-1 * alignment_len + promoter_after_tss, promoter_after_tss), obs2exp, color = 'red')
@@ -2423,171 +2479,141 @@ def plot_promoter(target_species, transcript_id, species_group, alignment, align
     if top_obs2exp <1:
         top_obs2exp = 1
     ax3.set_ylim(0, top_obs2exp)
-   
-    # CAGE plot
-    cage_height = 1
+    ax3.set_yticks([0, 0.6, 1])
+    ax3.set_yticklabels([0, 0.6, 1], va='center')
+    plt.setp(ax3.get_yticklabels(), fontsize=6)
+    ax3.axhline(0.6, color = 'black', alpha = 0.4)
 
-    cage_labels = []
-    for converted_cage in converted_cages:
-        converted_cage_start = converted_cage[0]
-        converted_cage_end = converted_cage[1]
-        description = converted_cage[2]
-        if ".." in description:
-            description = ""
-        cage_x_series = []
-        cage_y_series = []
-        cage_center_point = float(converted_cage_start + converted_cage_end)/2
-        cage_x_series.append(cage_center_point)
-        cage_y_series.append(cage_height)
-        
-        cage_width = abs(converted_cage_start - converted_cage_end)
-        ax7.bar(cage_x_series, cage_y_series, facecolor='black', edgecolor='black', align = 'center', width=cage_width, label=description)
 
-        # add label for the CAGE peak
-        if -1 * promoter_before_tss <= converted_cage_start <= promoter_after_tss + 1 or -1 * promoter_before_tss <= converted_cage_end <= promoter_after_tss + 1:
-            plt.text(cage_center_point, cage_height, description, color="red", rotation = 270, fontsize=5, horizontalalignment='center', verticalalignment='top')
+    ### human-specific experimental data
+    if target_species == "homo_sapiens":
 
-    ax7.axes.get_yaxis().set_visible(False)
+        ### AX7: CAGE plot
+        cage_height = 1
+        cage_labels = []
+        for converted_cage in converted_cages:
+            converted_cage_start = converted_cage[0]
+            converted_cage_end = converted_cage[1]
+            description = converted_cage[2]
+            if ".." in description:
+                description = ""
+            cage_x_series = []
+            cage_y_series = []
+            cage_center_point = float(converted_cage_start + converted_cage_end)/2
+            cage_x_series.append(cage_center_point)
+            cage_y_series.append(cage_height)
+            
+            cage_width = abs(converted_cage_start - converted_cage_end)
+            ax7.bar(cage_x_series, cage_y_series, facecolor='black', edgecolor='black', align = 'center', width=cage_width, label=description)
 
-    # GTRD plot
-    gtrd_height = 1
-    for converted_metacluster_in_promoter in converted_metaclusters_in_promoter:
-        converted_metacluster_start = converted_metacluster_in_promoter[0]
-        converted_metacluster_end = converted_metacluster_in_promoter[1]
-        metacluster_peak_count = converted_metacluster_in_promoter[2]
-        alpha_gradient = 0.5 + (metacluster_peak_count/1220.0)/2
-        
-        gtrd_x_series = []
-        gtrd_y_series = []
-        gtrd_center_point = float(converted_metacluster_start + converted_metacluster_end)/2
-        gtrd_x_series.append(gtrd_center_point)
-        gtrd_y_series.append(gtrd_height)
+            # add label for the CAGE peak
+            if -1 * promoter_before_tss <= converted_cage_start <= promoter_after_tss + 1 or -1 * promoter_before_tss <= converted_cage_end <= promoter_after_tss + 1:
+                plt.text(cage_center_point, cage_height, description, color="red", rotation = 270, fontsize=5, horizontalalignment='center', verticalalignment='top')
 
-        gtrd_width = abs(converted_metacluster_start - converted_metacluster_end)
-        ax5.bar(gtrd_x_series, gtrd_y_series, facecolor='black', edgecolor='black', alpha=alpha_gradient, align = 'center', width=gtrd_width)
-    ax5.axes.get_yaxis().set_visible(False)
+        ax7.axes.get_yaxis().set_visible(False)
 
-    # ATAC-Seq plot
-    for converted_atac_seq_in_promoter in converted_atac_seqs_in_promoter:
-        converted_atac_seq_start = converted_atac_seq_in_promoter[0]
-        converted_atac_seq_end = converted_atac_seq_in_promoter[1]
-        atac_seq_peak_score = converted_atac_seq_in_promoter[2]
-        alpha_gradient = 0.5 + atac_seq_peak_score/93.234864
-        
-        gtrd_x_series = []
-        gtrd_y_series = []
-        gtrd_midpoint = float(converted_atac_seq_start + converted_atac_seq_end)/2
-        gtrd_x_series.append(gtrd_midpoint)
-        gtrd_y_series.append(gtrd_height)
+        ### AX5: GTRD plot
+        gtrd_height = 1
+        for converted_metacluster_in_promoter in converted_metaclusters_in_promoter:
+            converted_metacluster_start = converted_metacluster_in_promoter[0]
+            converted_metacluster_end = converted_metacluster_in_promoter[1]
+            metacluster_peak_count = converted_metacluster_in_promoter[2]
+            alpha_gradient = 0.5 + (metacluster_peak_count/1220.0)/2
+            
+            gtrd_x_series = []
+            gtrd_y_series = []
+            gtrd_center_point = float(converted_metacluster_start + converted_metacluster_end)/2
+            gtrd_x_series.append(gtrd_center_point)
+            gtrd_y_series.append(gtrd_height)
 
-        gtrd_width = abs(converted_atac_seq_start - converted_atac_seq_end)
-        ax6.bar(gtrd_x_series, gtrd_y_series, facecolor='black', edgecolor='black', alpha=alpha_gradient, align = 'center', width=gtrd_width)
-    ax6.axes.get_yaxis().set_visible(False)
+            gtrd_width = abs(converted_metacluster_start - converted_metacluster_end)
+            ax5.bar(gtrd_x_series, gtrd_y_series, facecolor='black', edgecolor='black', alpha=alpha_gradient, align = 'center', width=gtrd_width)
+        ax5.axes.get_yaxis().set_visible(False)
 
-    # eQTLs plot
-    colors = ["green", "red"]
-    magnitudes = []
-    for converted_eqtl in converted_eqtls:
-        converted_eqtl_start, converted_eqtl_end, converted_eqtl_mag = converted_eqtl
-        if -1 * promoter_before_tss <= converted_eqtl_start <= promoter_after_tss + 1 or -1 * promoter_before_tss <= converted_eqtl_end <= promoter_after_tss + 1:
-            eqtl_midpoint = float(converted_eqtl_start + converted_eqtl_end)/2
-            eqtl_width = abs(converted_eqtl_start - converted_eqtl_end)
-            eqtl_x_series = []
-            eqtl_y_series = []
-            eqtl_x_series.append(eqtl_midpoint)
-            eqtl_y_series.append(converted_eqtl_mag)
-            magnitudes.append(converted_eqtl_mag)
-            if converted_eqtl_mag > 0:
-                c = colors[0]
-            else:
-                c = colors[1]
-            ax4.bar(eqtl_x_series, eqtl_y_series, facecolor=c, edgecolor=c, align = 'center', width=eqtl_width)
-##            # arrow does not format properly, perhaps due to size.  y value starts not at 0, and arrow wraps over itself.
-##            ax4.arrow(eqtl_midpoint, 0, 0, converted_eqtl_mag, color=c, length_includes_head = True, lw=10, width=0.01)
+        ### AX6: ATAC-Seq plot
+        for converted_atac_seq_in_promoter in converted_atac_seqs_in_promoter:
+            converted_atac_seq_start = converted_atac_seq_in_promoter[0]
+            converted_atac_seq_end = converted_atac_seq_in_promoter[1]
+            atac_seq_peak_score = converted_atac_seq_in_promoter[2]
+            alpha_gradient = 0.5 + atac_seq_peak_score/93.234864
+            
+            gtrd_x_series = []
+            gtrd_y_series = []
+            gtrd_midpoint = float(converted_atac_seq_start + converted_atac_seq_end)/2
+            gtrd_x_series.append(gtrd_midpoint)
+            gtrd_y_series.append(gtrd_height)
 
-    # cage_correlations
-    # rebuild dict to have just the top correlation
-    plot_tfs_corrs_colors = [(tf_name, cage_correlations_hit_tf_dict[tf_name], color_dict[tf_name]) if tf_name in cage_correlations_hit_tf_dict else (tf_name, 0, color_dict[tf_name]) for tf_name in top_x_greatest_hits_dict]
-    plot_tfs_corrs_colors_sorted = sorted(plot_tfs_corrs_colors, key=itemgetter(1), reverse=True)
-    ax8.bar(range(0, len(plot_tfs_corrs_colors_sorted)), [x[1] for x in plot_tfs_corrs_colors_sorted], color=[x[2] for x in plot_tfs_corrs_colors_sorted], edgecolor = "none")
-    ax8.set_ylim(0, plot_tfs_corrs_colors_sorted[0][1]+1)
-    ax8.set_xlim(-1, len(top_x_greatest_hits_dict))
+            gtrd_width = abs(converted_atac_seq_start - converted_atac_seq_end)
+            ax6.bar(gtrd_x_series, gtrd_y_series, facecolor='black', edgecolor='black', alpha=alpha_gradient, align = 'center', width=gtrd_width)
+        ax6.axes.get_yaxis().set_visible(False)
 
-    # plot title
-    title_str = target_species+"\n"+" ".join([transcript_name, transcript_id])
-    fig.text(0.065, 0.5, title_str, horizontalalignment='center', verticalalignment='center', transform=ax1.transAxes, rotation='vertical', fontsize=14)
+        ### AX4: eQTLs plot
+        colors = ["green", "red"]
+        magnitudes = []
+        for converted_eqtl in converted_eqtls:
+            converted_eqtl_start, converted_eqtl_end, converted_eqtl_mag = converted_eqtl
+            if -1 * promoter_before_tss <= converted_eqtl_start <= promoter_after_tss + 1 or -1 * promoter_before_tss <= converted_eqtl_end <= promoter_after_tss + 1:
+                eqtl_midpoint = float(converted_eqtl_start + converted_eqtl_end)/2
+                eqtl_width = abs(converted_eqtl_start - converted_eqtl_end)
+                eqtl_x_series = []
+                eqtl_y_series = []
+                eqtl_x_series.append(eqtl_midpoint)
+                eqtl_y_series.append(converted_eqtl_mag)
+                magnitudes.append(converted_eqtl_mag)
+                if converted_eqtl_mag > 0:
+                    c = colors[0]
+                else:
+                    c = colors[1]
+                ax4.bar(eqtl_x_series, eqtl_y_series, facecolor=c, edgecolor=c, align = 'center', width=eqtl_width)
+    ##            # arrow does not format properly, perhaps due to size.  y value starts not at 0, and arrow wraps over itself.
+    ##            ax4.arrow(eqtl_midpoint, 0, 0, converted_eqtl_mag, color=c, length_includes_head = True, lw=10, width=0.01)
 
-    # Set format of the plot(s)
-    # Hide x-ticks for all plots except the lowest
-    plt.setp(ax1.get_xticklabels(), visible=False)
-    plt.setp(ax2.get_xticklabels(), visible=False)
-    plt.setp(ax3.get_xticklabels(), visible=False)
-    plt.setp(ax4.get_xticklabels(), visible=False)
-    plt.setp(ax5.get_xticklabels(), visible=False)
-    plt.setp(ax6.get_xticklabels(), visible=False)
-    plt.setp(ax8.get_xticklabels(), visible=False)
+        ax4_yticks = [-1,0,1]
+        if len(magnitudes) > 0:
+            magnitudes.sort()
+            ax4_yticks = [math.floor(magnitudes[0]), 0, math.ceil(magnitudes[-1])]
+        ax4.set_yticks(ax4_yticks)
+        ax4.set_yticklabels(ax4_yticks, va='center')
+        plt.setp(ax4.get_yticklabels(), fontsize=6)
+        ax4.axhline(0.0, color = 'black', alpha = 0.4)
 
-    # plt + ax labels
-    plt.xlabel("Nucleotide position before TSS", labelpad=5)
-    ax1.text(1.02,.5,'Predicted TFBSs', verticalalignment='center', transform=ax1.transAxes, rotation='vertical', fontsize=8)
-    ax1.set_ylabel("Combined Affinity Score", fontsize = 8, labelpad = 0)
-    ax1.text(1.005,0.99,'+ strand', verticalalignment='top', transform=ax1.transAxes, rotation='vertical', fontsize=6)
-    ax1.text(1.005,.01,'- strand', verticalalignment='bottom', transform=ax1.transAxes, rotation='vertical', fontsize=6)
-    ax2.text(1.01,.5,'GERP\nConserv.\n'+species_group, verticalalignment='center', transform=ax2.transAxes, rotation='vertical', fontsize=5)
-    ax3.text(1.01,.5,'CpG\nObs/Exp', verticalalignment='center', transform=ax3.transAxes, rotation='vertical', fontsize=6)
-    ax4.text(1.01,.5,'eQTLs', verticalalignment='center', transform=ax4.transAxes, rotation='vertical', fontsize=6)
-    ax5.text(1.01,.5,'TFBS\nMeta\nClusters', verticalalignment='center', transform=ax5.transAxes, rotation='vertical', fontsize=6)
-    ax6.text(1.01,.5,'ATAC-Seq', verticalalignment='center', transform=ax6.transAxes, rotation='vertical', fontsize=6)
-    ax7.text(1.01,.5,'CAGE\nPeaks\n(TSSs)', verticalalignment='center', transform=ax7.transAxes, rotation='vertical', fontsize=6)
-    ax8.text(1.01,.5,'TF\nExpress.\nCorr.', verticalalignment='center', transform=ax8.transAxes, rotation='vertical', fontsize=6)
+        ### AX8: cage_correlations
+        # rebuild dict to have just the top correlation
+        plot_tfs_corrs_colors = [(tf_name, cage_correlations_hit_tf_dict[tf_name], color_dict[tf_name]) if tf_name in cage_correlations_hit_tf_dict else (tf_name, 0, color_dict[tf_name]) for tf_name in top_x_greatest_hits_dict]
+        plot_tfs_corrs_colors_sorted = sorted(plot_tfs_corrs_colors, key=itemgetter(1), reverse=True)
+        ax8.bar(range(0, len(plot_tfs_corrs_colors_sorted)), [x[1] for x in plot_tfs_corrs_colors_sorted], color=[x[2] for x in plot_tfs_corrs_colors_sorted], edgecolor = "none")
+        ax8.set_ylim(0, plot_tfs_corrs_colors_sorted[0][1]+1)
+        ax8.set_xlim(-1, len(top_x_greatest_hits_dict))
+        ax8.set_yticks([0, math.ceil(plot_tfs_corrs_colors_sorted[0][1])+1])
+        plt.setp(ax8.get_yticklabels(), fontsize=6)   
+
 
     ## set ticks
-    # ax1-predicted TFBSs
     # based on 100's
-    if y_range[-1] <= 50:
-        ax1.set_yticks(range(-50, 50+1, 10))
+    if y_range[-1] <= 100:
+        for falling_y_thresh in range(100, -1, -10):
+            if y_range[-1] < falling_y_thresh:
+                y_thresh = falling_y_thresh
+        ax1.set_yticks(range(-1* y_thresh, y_thresh+1, 10))
     else:
         ax1.set_yticks(range(-1 * (((tens_y*10)/100)+1)*100, (((tens_y*10)/100)+2)*100, 100))
+
+##    if y_range[-1] <= 50:
+##        ax1.set_yticks(range(-50, 50+1, 10))
+##    else:
+##        ax1.set_yticks(range(-1 * (((tens_y*10)/100)+1)*100, (((tens_y*10)/100)+2)*100, 100))
 
     ylabs=ax1.get_yticks().tolist()
     ylabs=[abs(x) for x in ylabs]
     ax1.set_yticklabels(ylabs)
     plt.setp(ax1.get_yticklabels(), fontsize=8)
 
-    # ax8-CAGE correlation
-    ax8.set_yticks([0, math.ceil(plot_tfs_corrs_colors_sorted[0][1])+1])
-    plt.setp(ax8.get_yticklabels(), fontsize=6)    
-
-    # ax2-conservation
-    ax2.set_yticks([0, 1])
-    plt.setp(ax2.get_yticklabels(), fontsize=6)
-
-    # ax3-CpG
-    ax3.set_yticks([0, 0.6, 1])
-    ax3.set_yticklabels([0, 0.6, 1], va='center')
-    plt.setp(ax3.get_yticklabels(), fontsize=6)
-
-    # ax4-eQTL
-    ax4_yticks = [-1,0,1]
-    if len(magnitudes) > 0:
-        magnitudes.sort()
-        ax4_yticks = [math.floor(magnitudes[0]), 0, math.ceil(magnitudes[-1])]
-    
-    ax4.set_yticks(ax4_yticks)
-    ax4.set_yticklabels(ax4_yticks, va='center')
-    plt.setp(ax4.get_yticklabels(), fontsize=6)
-
     # Misc    
-    ax3.axhline(0.6, color = 'black', alpha = 0.4)
-    ax4.axhline(0.0, color = 'black', alpha = 0.4)
     plt.xlim([-1 * promoter_before_tss, promoter_after_tss + 1])
 
     # legend
     num_cols = 6
     ax1.legend(bbox_to_anchor=[0., 1.1, 1.0, .102], loc='center', ncol=num_cols, prop={'size':8}, mode="expand", borderaxespad=0.)
-
-    # ax1 predicted TFBSs
-    ax1.axhline(0, color = 'black', linewidth=0.5)
                       
     # produce .svg figure
     plt.subplots_adjust(hspace=0.40)
