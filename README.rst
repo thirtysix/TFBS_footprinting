@@ -1,3 +1,7 @@
+
+Full documentation now available at `tfbs-footprinting.readthedocs.io <tfbs-footprinting.readthedocs.io>`_
+
+
 1. Introduction
 ==================
 ----------
