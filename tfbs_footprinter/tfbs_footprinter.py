@@ -77,7 +77,7 @@ def get_args():
                 tfbs_footprinter PATH_TO/sample_ensembl_ids.txt
 
                 all arguments:
-                tfbs_footprinter -t PATH_TO/sample_ensembl_ids.txt -tfs PATH_TO/sample_jaspar_tf_ids.txt -s homo_sapiens -g mammals -e low -pb 900 -pa 100 -tx 10 -update
+                tfbs_footprinter -t PATH_TO/sample_ensembl_ids.txt -tfs PATH_TO/sample_jaspar_tf_ids.txt -pb 900 -pa 100 -tx 10 -p 0.01 -update
 
                 run the sample analysis:
                 Option #1: tfbs_footprinter -t PATH_TO/sample_analysis/sample_analysis_list.csv
@@ -432,7 +432,8 @@ def experimentalDataUpdater(exp_data_update):
         print "Data dir doesn't exist"
     
     if exp_data_update:
-        current_version_url = "https://s3.us-east-2.amazonaws.com/tfbssexperimentaldata/experimental_data.current_versions.json"
+##        current_version_url = "https://s3.us-east-2.amazonaws.com/tfbssexperimentaldata/experimental_data.current_versions.json"
+##        experimental_data_url = "https://s3.us-east-2.amazonaws.com/tfbssexperimentaldata/data.tar.gz"
         experimental_data_url = "https://s3.us-east-2.amazonaws.com/tfbssexperimentaldata/data.tar.gz"
         experimental_data_down_loc = os.path.join(script_dir,'data.tar.gz')
 ##        current_versions_file = os.path.join(experimental_data_dir, "experimental_data.current_versions.json")
@@ -440,7 +441,7 @@ def experimentalDataUpdater(exp_data_update):
         logging.info(" ".join(["Downloading most current experimental data."]))
 
         try:
-            wget.download(current_version_url, out=experimental_data_dir)
+##            wget.download(current_version_url, out=experimental_data_dir)
             wget.download(experimental_data_url, out=experimental_data_down_loc)
             tar = tarfile.open(experimental_data_down_loc)
             tar.extractall(experimental_data_dir)
