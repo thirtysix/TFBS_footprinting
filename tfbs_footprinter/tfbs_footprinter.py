@@ -1450,7 +1450,11 @@ def cpg_weights_summing(transcript_id, target_species_hit, cpg_obsexp_weights_di
 
         # extract the weight for the obsexp which is just less than the current obsexp
         next_lesser_obsexp_index = bisect_left(cpg_obsexp_weights_dict_keys, cpg_obsexp)
-        next_lesser_obsexp = cpg_obsexp_weights_dict_keys[next_lesser_obsexp_index]
+        if next_lesser_obsexp_index != len(cpg_obsexp_weights_dict_keys):  
+            next_lesser_obsexp = cpg_obsexp_weights_dict_keys[next_lesser_obsexp_index]
+        else:
+            next_lesser_obsexp = cpg_obsexp_weights_dict_keys[-1]
+        
         cpg_weight = cpg_obsexp_weights_dict[next_lesser_obsexp]
         
         return cpg_weight
