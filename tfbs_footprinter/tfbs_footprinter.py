@@ -1230,48 +1230,51 @@ def cage_correlations_summing(target_species_hit, transcript_id, cage_dict, jasp
     Extract correlation values between CAGEs associated with a predicted TFBS protein,
     and CAGEs associated with the current gene.
     """
-    
-    # current transcript (target) cages
-    target_cages = cage_dict[transcript_id]
+
+    corr_weights_ls = []
+    corr_weight_sum = 0  
 
     # cages for all transcripts of the predicted TFBS's proteins
     tf_name = target_species_hit[0]
 
-    # JASPAR tfs are often hetero multimers
-    # therefore we should parse the individual proteins and identify transcripts for each
-    split_tf_names = clean_jaspar_names([tf_name])
-    tf_transcripts = []
-    for split_tf_name in split_tf_names:
-        if split_tf_name in jasparTFs_transcripts_dict:
-            tf_transcripts += jasparTFs_transcripts_dict[split_tf_name]
+    if transcript_id in cage_dict:
 
-    # for each JASPAR transcript, compile associated FANTOM CAGEs
-    tf_cages = []
-    for tf_transcript in tf_transcripts:
-        tf_cages += cage_dict[tf_transcript]
+        # current transcript (target) cages
+        target_cages = cage_dict[transcript_id]
 
-    # CAGEs may be shared by multiple transcripts with TSSs in close proximity
-    tf_cages = list(set([x[0] for x in tf_cages]))
+        # JASPAR tfs are often hetero multimers
+        # therefore we should parse the individual proteins and identify transcripts for each
+        split_tf_names = clean_jaspar_names([tf_name])
+        tf_transcripts = []
+        for split_tf_name in split_tf_names:
+            if split_tf_name in jasparTFs_transcripts_dict:
+                tf_transcripts += jasparTFs_transcripts_dict[split_tf_name]
+
+        # for each JASPAR transcript, compile associated FANTOM CAGEs
+        tf_cages = []
+        for tf_transcript in tf_transcripts:
+            tf_cages += cage_dict[tf_transcript]
+
+        # CAGEs may be shared by multiple transcripts with TSSs in close proximity
+        tf_cages = list(set([x[0] for x in tf_cages]))
     
-    # iterate through all target cage vs tf cage combinations and sum correlation weights
-    corr_weights_ls = []
-    corr_weight_sum = 0    
-    for tf_cage in tf_cages:
-        if tf_cage in cage_keys_dict:
-            tf_cage_key = cage_keys_dict[tf_cage]
-            for target_cage_list in target_cages:
-                target_cage = target_cage_list[0]
-                target_cage_key = cage_keys_dict[target_cage]
+        # iterate through all target cage vs tf cage combinations and sum correlation weights
+        for tf_cage in tf_cages:
+            if tf_cage in cage_keys_dict:
+                tf_cage_key = cage_keys_dict[tf_cage]
+                for target_cage_list in target_cages:
+                    target_cage = target_cage_list[0]
+                    target_cage_key = cage_keys_dict[target_cage]
 
-                if tf_cage_key in cage_correlations_dict:
-                    if target_cage_key in cage_correlations_dict[tf_cage_key]:
-                        cage_correlation = cage_correlations_dict[tf_cage_key][target_cage_key]
-                        cage_corr_weight = cage_corr_weights_dict[abs(cage_correlation)]
-                        corr_weight_sum += cage_corr_weight
-                        corr_weights_ls.append(cage_corr_weight)
+                    if tf_cage_key in cage_correlations_dict:
+                        if target_cage_key in cage_correlations_dict[tf_cage_key]:
+                            cage_correlation = cage_correlations_dict[tf_cage_key][target_cage_key]
+                            cage_corr_weight = cage_corr_weights_dict[abs(cage_correlation)]
+                            corr_weight_sum += cage_corr_weight
+                            corr_weights_ls.append(cage_corr_weight)
 
-        else:
-            print tf_cage
+            else:
+                print tf_cage
 
     if len(corr_weights_ls) > 0:
         corr_weights_ls.sort()
