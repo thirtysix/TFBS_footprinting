@@ -42,8 +42,15 @@ from bisect import bisect_right
 # Description ##################################################################
 ################################################################################
 """
-Conservation is based on scoring of motif slice across alignment.
 Thresholds are allowed to be negative, as based on whole genome scoring.
+
+Improvements to be made:
+1) Change FANTOM CAGE correlation analysis to only include top CAGE peaks,
+instead of all CAGES.  Should reduce size and focus on most relevant CAGEs.
+2) Account for GTRD metacluster peak count.  Switch to GTRD peaks by TF if the
+number of TFs available becomes larger than those offered by JASPAR.  Similarly,
+if all JASPAR TFs become present in GTRD database, then switch from metaclusters
+to peaks by TF.
 """
 
 
@@ -167,34 +174,7 @@ def get_args():
                     print "Incomplete arguments in input file on line", i
                     
                 else:
-##                    transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, output_dir, pval = parsed_arg_line
-##                    transcript_id, target_tfs_filename, target_species, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, pval = parsed_arg_line
-##                    transcript_id, target_tfs_filename, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, pval = parsed_arg_line
                     transcript_id, target_tfs_filename, promoter_before_tss, promoter_after_tss, top_x_tfs_count, pval = parsed_arg_line
-
-##                    # transcript_id
-##                    transcript_id = transcript_id.upper()
-##                    if len(transcript_id) != 15 or "ENST" not in transcript_id:
-##                        print "Ensembl transcript ID is incorrect on line", i, ". Should be of the format (ENST00000378357)."
-##
-##                    else:
-##                        # target_species
-##                        target_species = target_species.lower()
-##                        if target_species not in available_species:
-##                            print "Target species", target_species, "in line", i, "not in available species.  Should be of the format ('homo_sapiens').  Defaulting to 'homo_sapiens'."
-##                            target_species = "homo_sapiens"
-##            
-##                        # species_group
-##                        species_group = species_group.lower()
-##                        if species_group not in species_groups:
-##                            print "Entered species group", species_group, "in line", i, "not in available species groups.  Should be a member of 'mammals', 'primates', 'sauropsids',  or 'fish'.  Defaulting to 'mammals'."
-##                            species_group = "mammals"
-##
-##                        # coverage
-##                        coverage = coverage.lower()
-##                        if coverage not in ["low", "high"]:
-##                            print "Entered coverage level", coverage, "in line", i, "not in available coverage levels.  Should be either 'low' or 'high'.  Defaulting to 'low'."
-##                            coverage = "low"
 
                     # promoter_before_tss/promoter_after_tss
                     try:
@@ -447,7 +427,7 @@ def experimentalDataUpdater(exp_data_update):
             tar.extractall(experimental_data_dir)
 
         except:
-            logging.warning(" ".join(["Error in downloading experimental data.  Check your internet connection."]))
+            logging.warning(" ".join(["Error in downloading experimental data.  Check your internet connection, and make sure the transcript id is of the format 'ENST00000378357'"]))
 
         
 def experimentaldata(target_species):
@@ -537,14 +517,13 @@ def experimentalDataUpdater_beta():
         dump_json(current_versions_file, current_versions)
 
 
-def species_specific_data(target_species, species_specific_data_dir):
+def species_specific_data(target_species, chromosome, species_specific_data_dir):
     """
     Many datasets are species-specific.  If the current target species has species-specific datasets, load them.
     Altered to allow for multiple versions of data.  The matching files are sorted and those occuring later in the list, are presumably later editions.
     """
     
     # load GERP locations
-    ##    gerp_conservation_locations_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'gerp_conservation.locations_dict.e93.msg']))
     gerp_conservation_locations_dict_filenames = [os.path.join(species_specific_data_dir, x) for x in os.listdir(species_specific_data_dir) if "gerp_conservation.locations_dict" in x and target_species in x]
     if len(gerp_conservation_locations_dict_filenames) > 0:
         gerp_conservation_locations_dict_filenames.sort()
@@ -572,8 +551,6 @@ def species_specific_data(target_species, species_specific_data_dir):
         cage_dict = load_msgpack(cage_dict_filename)
     else:
         cage_dict = {}
-##    cage_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'cage.promoters.grch38.2000.genomic_coords.msg']))
-##    cage_dict = load_msgpack(cage_dict_filename)
 
     # load CAGE dist weights
     cage_dist_weights_dict_filenames = [os.path.join(species_specific_data_dir, x) for x in os.listdir(species_specific_data_dir) if "cage_dist_weights" in x and target_species in x]
@@ -583,8 +560,6 @@ def species_specific_data(target_species, species_specific_data_dir):
         cage_dist_weights_dict = load_json(cage_dist_weights_dict_filename)
     else:
         cage_dist_weights_dict = {}
-##    cage_dist_weights_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'cage_dist_weights.json']))
-##    cage_dist_weights_dict = load_json(cage_dist_weights_dict_filename)
 
     # load CAGE correlations
     cage_correlations_dict_filenames = [os.path.join(species_specific_data_dir, x) for x in os.listdir(species_specific_data_dir) if "rekeyed_combined_cage_corr_dict" in x and target_species in x]
@@ -594,8 +569,6 @@ def species_specific_data(target_species, species_specific_data_dir):
         cage_correlations_dict = load_msgpack(cage_correlations_dict_filename)
     else:
         cage_correlations_dict = {}
-##    cage_correlations_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'rekeyed_combined_cage_corr_dict.jaspar.msg']))
-##    cage_correlations_dict = load_msgpack(cage_correlations_dict_filename)
 
     # load CAGE correlation weights
     cage_corr_weights_dict_filenames = [os.path.join(species_specific_data_dir, x) for x in os.listdir(species_specific_data_dir) if "cage_corr_weights" in x and target_species in x]
@@ -606,10 +579,6 @@ def species_specific_data(target_species, species_specific_data_dir):
         cage_corr_weights_dict = {float(k):v for k,v in cage_corr_weights_dict.iteritems()}
     else:
         cage_corr_weights_dict = {}
-##    cage_corr_weights_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'cage_corr_weights.json']))
-##    cage_corr_weights_dict = load_json(cage_corr_weights_dict_filename)
-##    if cage_corr_weights_dict != None:
-##        cage_corr_weights_dict = {float(k):v for k,v in cage_corr_weights_dict.iteritems()}
 
     # load CAGE keys
     cage_keys_dict_filenames = [os.path.join(species_specific_data_dir, x) for x in os.listdir(species_specific_data_dir) if "cage_ids_key_dict" in x and target_species in x]
@@ -619,8 +588,6 @@ def species_specific_data(target_species, species_specific_data_dir):
         cage_keys_dict = load_json(cage_keys_dict_filename)
     else:
         cage_keys_dict = {}
-##    cage_keys_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'cage_ids_key_dict.json']))
-##    cage_keys_dict = load_json(cage_keys_dict_filename)
 
     # load JASPAR tfs to Ensembl transcript ids
     jasparTFs_transcripts_dict_filenames = [os.path.join(species_specific_data_dir, x) for x in os.listdir(species_specific_data_dir) if "jasparTFs.transcripts.single_protein" in x and target_species in x]
@@ -630,8 +597,6 @@ def species_specific_data(target_species, species_specific_data_dir):
         jasparTFs_transcripts_dict = load_json(jasparTFs_transcripts_dict_filename)
     else:
         jasparTFs_transcripts_dict = {}
-##    jasparTFs_transcripts_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'jasparTFs.transcripts.single_protein.dict.json']))
-##    jasparTFs_transcripts_dict = load_json(jasparTFs_transcripts_dict_filename)
 
     # load CpG score weights
     cpg_obsexp_weights_dict_filenames = [os.path.join(species_specific_data_dir, x) for x in os.listdir(species_specific_data_dir) if "cpg_obsexp_weights" in x and target_species in x]
@@ -645,14 +610,6 @@ def species_specific_data(target_species, species_specific_data_dir):
     else:
         cpg_obsexp_weights_dict = {}
         cpg_obsexp_weights_dict_keys = []
-##    cpg_obsexp_weights_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'cpg_obsexp_weights.json']))
-##    cpg_obsexp_weights_dict = load_json(cpg_obsexp_weights_dict_filename)
-##    if cpg_obsexp_weights_dict != None:
-##        cpg_obsexp_weights_dict = {float(k):float(v) for k,v in cpg_obsexp_weights_dict.iteritems()}
-##        cpg_obsexp_weights_dict_keys = cpg_obsexp_weights_dict.keys()
-##        cpg_obsexp_weights_dict_keys.sort()
-##    else:
-##        cpg_obsexp_weights_dict_keys = []
 
     # load GTEx variants
     gtex_variants_filenames = [os.path.join(species_specific_data_dir, x) for x in os.listdir(species_specific_data_dir) if "min_unique.eqtls" in x and target_species in x]
@@ -662,9 +619,6 @@ def species_specific_data(target_species, species_specific_data_dir):
         gtex_variants = load_msgpack(gtex_variants_filename)
     else:
         gtex_variants = {}
-##    gtex_variants_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'gtex_reduced.loc_effect.uniques.tupled.grch38.msg']))
-##    gtex_variants_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'gtex_v7.min_unique.eqtls.grch38.msg']))
-##    gtex_variants = load_msgpack(gtex_variants_filename)
 
     # load GTEx weights
     gtex_weights_dict_filenames = [os.path.join(species_specific_data_dir, x) for x in os.listdir(species_specific_data_dir) if "gtex_weights" in x and target_species in x]
@@ -675,58 +629,44 @@ def species_specific_data(target_species, species_specific_data_dir):
         gtex_weights_dict = {float(k):float(v) for k,v in gtex_weights_dict.iteritems()}
     else:
         gtex_weights_dict = {}    
-##    gtex_weights_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'gtex_weights.json']))
-##    gtex_weights_dict = load_json(gtex_weights_dict_filename)
-##    if gtex_weights_dict != None:
-##        gtex_weights_dict = {float(k):float(v) for k,v in gtex_weights_dict.iteritems()}
 
     # load human meta clusters from GTRD project
-    gtrd_metaclusters_dict_filenames = [os.path.join(species_specific_data_dir, x) for x in os.listdir(species_specific_data_dir) if "metaclusters.interval" in x and target_species in x]
-    if len(gtrd_metaclusters_dict_filenames) > 0:
-        gtrd_metaclusters_dict_filenames.sort()
-        gtrd_metaclusters_dict_filename = gtrd_metaclusters_dict_filenames[-1]
-        gtrd_metaclusters_dict = load_msgpack(gtrd_metaclusters_dict_filename)
-    else:
-        gtrd_metaclusters_dict = {}    
-##    gtrd_metaclusters_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'meta_clusters.interval.-chr.clipped.ordered.tupled.msg']))
-##    gtrd_metaclusters_dict = load_msgpack(gtrd_metaclusters_dict_filename)
+    gtrd_species_specific_data_dir = os.path.join(species_specific_data_dir, "gtrd_data")
+    if os.path.exists(gtrd_species_specific_data_dir):
+        gtrd_metaclusters_chrom_dict_filename = os.path.join(gtrd_species_specific_data_dir, ".".join([target_species, "metaclusters", "interval", "Chr"+chromosome.upper(), "clipped", "ordered", "tupled", "msg"]))
+
+        if os.path.exists(gtrd_metaclusters_chrom_dict_filename):
+            gtrd_metaclusters_dict = load_msgpack(gtrd_metaclusters_chrom_dict_filename)
+        else:
+            gtrd_metaclusters_dict = {}
 
     # load metacluster overlap weights
-    metacluster_overlap_weights_dict_filenames = [os.path.join(species_specific_data_dir, x) for x in os.listdir(species_specific_data_dir) if "metaclusters_overlap_weights_dict" in x and target_species in x]
-    if len(metacluster_overlap_weights_dict_filenames) > 0:
+    metacluster_overlap_weights_dict_filenames = [os.path.join(gtrd_species_specific_data_dir, x) for x in os.listdir(gtrd_species_specific_data_dir) if "metaclusters_overlap_weights_dict" in x and target_species in x]
+    if len(metacluster_overlap_weights_dict_filenames) > 0:        
         metacluster_overlap_weights_dict_filenames.sort()
         metacluster_overlap_weights_dict_filename = metacluster_overlap_weights_dict_filenames[-1]
         metacluster_overlap_weights_dict = load_json(metacluster_overlap_weights_dict_filename)
-        metacluster_overlap_weights_dict = {float(k):float(v) for k,v in metacluster_overlap_weights_dict.iteritems()}
+        metacluster_overlap_weights_dict = {float(k):float(v) for k,v in metacluster_overlap_weights_dict.iteritems()}                  
     else:
-        metacluster_overlap_weights_dict = {}        
-##    metacluster_overlap_weights_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'metaclusters_overlap_weights_dict.json']))
-##    metacluster_overlap_weights_dict = load_json(metacluster_overlap_weights_dict_filename)
-##    if metacluster_overlap_weights_dict != None:
-##        metacluster_overlap_weights_dict = {float(k):float(v) for k,v in metacluster_overlap_weights_dict.iteritems()}
+        metacluster_overlap_weights_dict = {}
 
     # load human ATAC-Seq from Encode project
-    atac_seq_dict_filenames = [os.path.join(species_specific_data_dir, x) for x in os.listdir(species_specific_data_dir) if "atac-seq.combined.merged.reduced" in x and target_species in x]
-    if len(atac_seq_dict_filenames) > 0:
-        atac_seq_dict_filenames.sort()
-        atac_seq_dict_filename = atac_seq_dict_filenames[-1]
-        atac_seq_dict = load_msgpack(atac_seq_dict_filename)
-    else:
-        atac_seq_dict = {}
-##    atac_seq_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'atac-seq.combined.merged.reduced.tupled.msg']))
-##    atac_seq_dict = load_msgpack(atac_seq_dict_filename)
+    atac_seq_species_specific_data_dir = os.path.join(species_specific_data_dir, "atac_seq_data")
+    if os.path.exists(atac_seq_species_specific_data_dir):
+        atac_seq_chrom_dict_filename = os.path.join(atac_seq_species_specific_data_dir, ".".join([target_species, "atac-seq", "Chr"+chromosome.upper(), "msg"]))
+        if os.path.exists(atac_seq_chrom_dict_filename):
+            atac_seq_dict = load_msgpack(atac_seq_chrom_dict_filename)
+        else:
+            atac_seq_dict = {}
 
     # load ATAC-Seq dist weights
-    atac_dist_weights_dict_filenames = [os.path.join(species_specific_data_dir, x) for x in os.listdir(species_specific_data_dir) if "atac_dist_weights" in x and target_species in x]
+    atac_dist_weights_dict_filenames = [os.path.join(atac_seq_species_specific_data_dir, x) for x in os.listdir(atac_seq_species_specific_data_dir) if "atac_dist_weights" in x and target_species in x]
     if len(atac_dist_weights_dict_filenames) > 0:
         atac_dist_weights_dict_filenames.sort()
         atac_dist_weights_dict_filename = atac_dist_weights_dict_filenames[-1]
         atac_dist_weights_dict = load_json(atac_dist_weights_dict_filename)
     else:
-        atac_dist_weights_dict = {}
-##    atac_dist_weights_dict_filename = os.path.join(species_specific_data_dir, ".".join([target_species, 'atac_dist_weights.json']))
-##    atac_dist_weights_dict = load_json(atac_dist_weights_dict_filename)
-    
+        atac_dist_weights_dict = {}    
 
     return gerp_conservation_locations_dict, gerp_conservation_weight_dict, species_group, cage_dict, cage_dist_weights_dict, cage_correlations_dict, cage_corr_weights_dict, cage_keys_dict, jasparTFs_transcripts_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, gtex_variants, gtex_weights_dict, gtrd_metaclusters_dict, atac_seq_dict
 
@@ -917,7 +857,6 @@ def tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, t
                             if current_frame_score >= tf_pwm_score_threshold:
 ##                            if current_frame_score >= -10000:    
                                 current_frame_score = round(current_frame_score, 2)
-                                current_frame_score_pvalue = pvals_scores_list # wat
                                 scores_list_sorted = [x[1] for x in pvals_scores_list_sorted]
                                 pval_index = bisect_left(scores_list_sorted, current_frame_score)
                                 if pval_index >= len(pvals_scores_list_sorted):
@@ -928,7 +867,7 @@ def tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, t
                                     pval_index -= 1
                                         
                                 current_frame_score_pvalue = pvals_scores_list_sorted[pval_index][0]
-
+                                    
                                 hit_loc_start, hit_loc_end, hit_loc_before_TSS_start, hit_loc_before_TSS_end = start_end_found_motif(i, strand, seq_length, promoter_after_tss, motif_length)
 
                                 # identify position in alignment from start of found motif in unaligned sequence
@@ -1186,6 +1125,24 @@ def find_clusters(ens_gene_id, chr_start, chr_end, alignment, target_species, ch
 ##    
 
 
+def eqtl_overlap_likelihood(converted_eqtls, chr_end, chr_start, gene_len, gtex_variants, ens_gene_id):
+    """
+    Likelihood of eQTL occurrence.
+    """
+
+    if len(converted_eqtls) > 0:        
+        transcript_len  = float(chr_end - chr_start)
+
+        # determine size of search space, and probability of observing an eQTL in this gene.
+        # GTEx searches for variants which occur over the span of the gene + 1,000,000 nt upstream+downstream.
+        eqtl_search_space = 2000000 + gene_len
+        associated_gtx_eqtls = gtex_variants[ens_gene_id]
+        variant_count = len(associated_gtx_eqtls) * 1.
+        eqtl_occurrence_log_likelihood = -1 * math.log(((tf_len * variant_count)/(eqtl_search_space-tf_len)) * (transcript_len/gene_len), 2)
+
+    return eqtl_occurrence_log_likelihood
+    
+
 def eqtls_weights_summing(ens_gene_id, target_species_hit, converted_eqtls, gtex_weights_dict, chr_start, chr_end, gtex_variants, tf_len, gene_len):
     """
     Identify if any of the eQTLs associated with this gene overlap this predicted TFBS.
@@ -1198,6 +1155,8 @@ def eqtls_weights_summing(ens_gene_id, target_species_hit, converted_eqtls, gtex
     if len(converted_eqtls) > 0:        
         transcript_len  = float(chr_end - chr_start)
 
+        # Only needs to be calculated once, therefore break into new function (eqtl_overlap_likelihood) so that it is not performed for each of the TFBS predictions #
+        # Requires the tf_len, which will need to be stored in a dict instead of drawing it from the current hit in order to avoid repetition #
         # determine size of search space, and probability of observing an eQTL in this gene.
         # GTEx searches for variants which occur over the span of the gene + 1,000,000 nt upstream+downstream.
         eqtl_search_space = 2000000 + gene_len
@@ -2158,33 +2117,29 @@ def gtrd_positions_translate(target_dir, gtrd_metaclusters_dict, chromosome, str
     Converted_reg_end is the rightmost regulatory position.
     """
 
-    potential_metaclusters_in_promoter = []
-        
-    if chromosome in gtrd_metaclusters_dict:
-        promoter_start_millions = promoter_start/1000000
-        promoter_end_millions = promoter_end/1000000
+    potential_metaclusters_in_promoter = []        
+    promoter_start_millions = promoter_start/1000000
+    promoter_end_millions = promoter_end/1000000
 
-        # retrieve the metacluster peaks on which the chrom that the transcript is found
-        # if the millions place is the same for each then the metaclusters come from a single
-        # subdict entry
-        if promoter_start_millions == promoter_end_millions:
-            if promoter_start_millions in gtrd_metaclusters_dict[chromosome]:
-                potential_metaclusters_in_promoter += gtrd_metaclusters_dict[chromosome][promoter_start_millions]
+    # retrieve the metacluster peaks on which the chrom that the transcript is found
+    # if the millions place is the same for each then the metaclusters come from a single
+    # subdict entry
+    if promoter_start_millions == promoter_end_millions:
+        if promoter_start_millions in gtrd_metaclusters_dict:        
+            potential_metaclusters_in_promoter += gtrd_metaclusters_dict[promoter_start_millions]
 
-        # have to account for the possibility that this location spans a millions place
-        # e.g. from 999,000 - 1,001,000
-        else:
-            if promoter_start_millions in gtrd_metaclusters_dict[chromosome]:
-                potential_metaclusters_in_promoter += gtrd_metaclusters_dict[chromosome][promoter_start_millions]
+    # have to account for the possibility that this location spans a millions place
+    # e.g. from 999,000 - 1,001,000
+    else:
+        if promoter_start_millions in gtrd_metaclusters_dict:
+            potential_metaclusters_in_promoter += gtrd_metaclusters_dict[promoter_start_millions]
 
-            if promoter_end_millions in gtrd_metaclusters_dict[chromosome]:
-                potential_metaclusters_in_promoter += gtrd_metaclusters_dict[chromosome][promoter_end_millions]         
-
+        if promoter_end_millions in gtrd_metaclusters_dict:
+            potential_metaclusters_in_promoter += gtrd_metaclusters_dict[promoter_end_millions]
 
     # identify if the metacluster occurs within user-defined promoter region
     metaclusters_in_promoter = []    
     for potential_metacluster in potential_metaclusters_in_promoter:
-        
         metacluster_start = potential_metacluster[0]
         metacluster_end = metacluster_start + potential_metacluster[1]
         metacluster_peak_count = potential_metacluster[2]
@@ -2231,26 +2186,26 @@ def atac_pos_translate(atac_seq_dict, chromosome, strand, promoter_start, promot
 
     potential_atac_seqs_in_promoter = []
     
-    chromosome = "chr" + chromosome.lower()
-    if chromosome in atac_seq_dict:
-        promoter_start_millions = promoter_start/1000000
-        promoter_end_millions = promoter_end/1000000
+##    chromosome = "chr" + chromosome.lower()
+##    if chromosome in atac_seq_dict:
+    promoter_start_millions = promoter_start/1000000
+    promoter_end_millions = promoter_end/1000000
 
-        # retrieve the ATAC-Seq peaks on which the chrom that the transcript is found
-        # if the millions place is the same for each then the atac-seqs come from a single subdict entry
-        if promoter_start_millions == promoter_end_millions:
-            if promoter_start_millions in atac_seq_dict[chromosome]:
-                potential_atac_seqs_in_promoter += atac_seq_dict[chromosome][promoter_start_millions]
+    # retrieve the ATAC-Seq peaks on which the chrom that the transcript is found
+    # if the millions place is the same for each then the atac-seqs come from a single subdict entry
+    if promoter_start_millions == promoter_end_millions:
+        if promoter_start_millions in atac_seq_dict:
+            potential_atac_seqs_in_promoter += atac_seq_dict[promoter_start_millions]
 
-        # have to account for the possibility that this location spans a millions place
-        # e.g. from 999,000 - 1,001,000
-        else:
-            if promoter_start_millions in atac_seq_dict[chromosome]:
-                potential_atac_seqs_in_promoter += atac_seq_dict[chromosome][promoter_start_millions]
+    # have to account for the possibility that this location spans a millions place
+    # e.g. from 999,000 - 1,001,000
+    else:
+        if promoter_start_millions in atac_seq_dict:
+            potential_atac_seqs_in_promoter += atac_seq_dict[promoter_start_millions]
 
-            if promoter_end_millions in atac_seq_dict[chromosome]:
-                potential_atac_seqs_in_promoter += atac_seq_dict[chromosome][promoter_end_millions]      
-        
+        if promoter_end_millions in atac_seq_dict[chromosome]:
+            potential_atac_seqs_in_promoter += atac_seq_dict[promoter_end_millions]
+            
     # identify if the ATAC-Seq peak occurs within user-defined promoter region
     atac_seqs_in_promoter = []    
     for potential_atac_seq in potential_atac_seqs_in_promoter:
@@ -2259,15 +2214,10 @@ def atac_pos_translate(atac_seq_dict, chromosome, strand, promoter_start, promot
         atac_seq_end = potential_atac_seq[0] + potential_atac_seq[1]
         atac_seq_score = potential_atac_seq[2]
 
-
         overlap = overlap_range([promoter_start, promoter_end], [atac_seq_start, atac_seq_end])
         
         if len(overlap) > 0:
-            atac_seqs_in_promoter.append([atac_seq_start, atac_seq_end, atac_seq_score])  
-        
-##        if (atac_seq_start >= promoter_start and atac_seq_start <= promoter_end) or \
-##        (atac_seq_end >= promoter_start and atac_seq_end <= promoter_end):
-##            atac_seqs_in_promoter.append(potential_atac_seq)                
+            atac_seqs_in_promoter.append([atac_seq_start, atac_seq_end, atac_seq_score])            
 
     # convert the positions of the in-promoter atac_seqs to tss-relative
     converted_atac_seqs_in_promoter = []
@@ -2282,9 +2232,6 @@ def atac_pos_translate(atac_seq_dict, chromosome, strand, promoter_start, promot
         if strand == -1:
             converted_atac_seq_start = (tss - atac_seq_start)
             converted_atac_seq_end = (tss - atac_seq_end)
-
-##        converted_atac_seq_start = (tss - atac_seq_start) * -1
-##        converted_atac_seq_end = (tss - atac_seq_end) * -1
 
         converted_atac_seq = [converted_atac_seq_start, converted_atac_seq_end, atac_seq_score]
         converted_atac_seqs_in_promoter.append(converted_atac_seq)
@@ -2491,7 +2438,6 @@ def plot_promoter(target_species, transcript_id, species_group, alignment, align
     ax3.set_yticklabels([0, 0.6, 1], va='center')
     plt.setp(ax3.get_yticklabels(), fontsize=6)
     ax3.axhline(0.6, color = 'black', alpha = 0.4)
-
 
     ### human-specific experimental data
     if target_species == "homo_sapiens":
@@ -2724,10 +2670,11 @@ def main():
                 species_specific_data_dir = os.path.join(script_dir, 'data', target_species)
 ##                if i == 0 or (i>0 and args_lists[i-1][4] != target_species):
                 experimentaldata(target_species)
-                if target_species != last_target_species:
+                if target_species != last_target_species or chromosome != last_chromosome:
                     if os.path.exists(species_specific_data_dir):
-                        gerp_conservation_locations_dict, gerp_conservation_weight_dict, species_group, cage_dict, cage_dist_weights_dict, cage_correlations_dict, cage_corr_weights_dict, cage_keys_dict, jasparTFs_transcripts_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, gtex_variants, gtex_weights_dict, gtrd_metaclusters_dict, atac_seq_dict = species_specific_data(target_species, species_specific_data_dir)
+                        gerp_conservation_locations_dict, gerp_conservation_weight_dict, species_group, cage_dict, cage_dist_weights_dict, cage_correlations_dict, cage_corr_weights_dict, cage_keys_dict, jasparTFs_transcripts_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, gtex_variants, gtex_weights_dict, gtrd_metaclusters_dict, atac_seq_dict = species_specific_data(target_species, chromosome, species_specific_data_dir)
                     last_target_species = target_species
+                    last_chromosome = chromosome
                 
                 # load target tfs
                 if target_tfs_filename == "" or target_tfs_filename == None:
