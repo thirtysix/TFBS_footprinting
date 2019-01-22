@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Python vers. 2.7.0 ###########################################################
-__version__ = "1.0.0b43"
+__version__ = "1.0.0b46"
 
 
 # Libraries ####################################################################
@@ -256,7 +256,7 @@ def load_msgpack(object_filename):
 
     if os.path.exists(object_filename):
         with open(object_filename, 'r') as object_file:
-            return msgpack.unpack(object_file, use_list=False)
+            return msgpack.unpack(object_file, max_array_len=200000, use_list=False)
     else:
         return None
 
@@ -265,7 +265,7 @@ def save_msgpack(msgpack_obj, msgpack_filename):
     """Save msgpack object to file."""
     
     with open(msgpack_filename, 'w') as msgpack_file:
-        msgpack.pack(msgpack_obj, msgpack_file) 
+        msgpack.pack(msgpack_obj, msgpack_file, use_bin_type=True) 
 
 
 def directory_creator(directory_name):
@@ -307,17 +307,48 @@ def ensemblrest(query_type, options, output_type, ensembl_id=None, log=False):
     if log:
         logging.info(" ".join(["Ensembl REST query made:", full_query]))
 
+    success = False
+    try_count = 0
+    max_tries = 10
+    fail_sleep_time = 120
+    decoded_json = {}
+    fasta_content = []
+
     if output_type == 'json':
-        resp, json_data = http.request(full_query, method="GET")
-        decoded_json = json.loads(json_data)
-        ensemblrest_rate(resp)
+        if success == False and try_count < max_tries:
+            try:
+                resp, json_data = http.request(full_query, method="GET")
+                decoded_json = json.loads(json_data)
+                ensemblrest_rate(resp)
+                try_count += 1
+                success = True
+                return decoded_json
 
+            except:
+                logging.info(" ".join(["Ensembl REST query unsuccessful, attempt:", "/".join([str(try_count), str(max_tries)]), "Sleeping:", str(fail_sleep_time), "seconds.", full_query]))
+                try_count += 1
+                print " ".join(["Ensembl REST query unsuccessful, attempt:", "/".join([str(try_count), str(max_tries)]), "Sleeping:", str(fail_sleep_time), "seconds.", "See logfile for query."])
+                time.sleep(fail_sleep_time)
+
+        # return empty decoded_json if max tries has elapsed
         return decoded_json
-
+    
     if output_type == 'fasta':
-        resp, fasta_content = http.request(server, method="GET", headers={"Content-Type":"text/x-fasta"})
-        ensemblrest_rate(resp)
+        if success == False and try_count < max_tries:
+            try:
+                resp, fasta_content = http.request(server, method="GET", headers={"Content-Type":"text/x-fasta"})
+                ensemblrest_rate(resp)
+                try_count += 1
+                success = True
+                return fasta_content
 
+            except:    
+                logging.info(" ".join(["Ensembl REST query unsuccessful, attempt:", "/".join([str(try_count), str(max_tries)]), "Sleeping:", str(fail_sleep_time), "seconds.", full_query]))
+                try_count += 1
+                print " ".join(["Ensembl REST query unsuccessful, attempt:", "/".join([str(try_count), str(max_tries)]), "Sleeping:", str(fail_sleep_time), "seconds.", "See logfile for query."])
+                time.sleep(fail_sleep_time)
+
+        # return empty fasta_content if max tries has elapsed
         return fasta_content
 
 
@@ -333,7 +364,7 @@ def ensemblrest_rate(resp):
             time.sleep(sleep_time)
             
         else:
-            sleep_time = 40
+            sleep_time = 60
             logging.warning(" ".join(["Ensembl REST requests sleeping for:", str(sleep_time)]))
             time.sleep(sleep_time)
 
@@ -405,15 +436,29 @@ def experimentalDataUpdater(exp_data_update):
     """
 
     experimental_data_dir = os.path.join(script_dir, 'data')
+    experimental_data_present = False
 
+    # test if data dir exists
     if not os.path.exists(experimental_data_dir):
         directory_creator(experimental_data_dir)
         exp_data_update = True
         print "Data dir doesn't exist"
-    
+
+    # if the data dir exists, check to see that all of the required file patterns are present
+    else:
+        required_data_file_patterns = ["pwms.json", "all_tfs_thresholds", "all_pwms_loglikelihood_dict"]
+        experimental_data_filenames = [x for x in os.listdir(experimental_data_dir) if os.path.isfile(os.path.join(experimental_data_dir, x))]
+        all_patterns_matched = all([any([required_data_file_pattern in experimental_data_filename
+                                          for experimental_data_filename in experimental_data_filenames])
+                                         for required_data_file_pattern in required_data_file_patterns])
+                                    
+        if all_patterns_matched:
+            experimental_data_present = True
+        else:
+            exp_data_update = True
+
+    # perform an update of the base data dir
     if exp_data_update:
-##        current_version_url = "https://s3.us-east-2.amazonaws.com/tfbssexperimentaldata/experimental_data.current_versions.json"
-##        experimental_data_url = "https://s3.us-east-2.amazonaws.com/tfbssexperimentaldata/data.tar.gz"
         experimental_data_url = "https://s3.us-east-2.amazonaws.com/tfbssexperimentaldata/data.tar.gz"
         experimental_data_down_loc = os.path.join(script_dir,'data.tar.gz')
 ##        current_versions_file = os.path.join(experimental_data_dir, "experimental_data.current_versions.json")
@@ -421,13 +466,17 @@ def experimentalDataUpdater(exp_data_update):
         logging.info(" ".join(["Downloading most current experimental data."]))
 
         try:
-##            wget.download(current_version_url, out=experimental_data_dir)
             wget.download(experimental_data_url, out=experimental_data_down_loc)
             tar = tarfile.open(experimental_data_down_loc)
             tar.extractall(experimental_data_dir)
+            experimental_data_present = True
 
         except:
-            logging.warning(" ".join(["Error in downloading experimental data.  Check your internet connection, and make sure the transcript id is of the format 'ENST00000378357'"]))
+##            logging.warning(" ".join(["Error in downloading experimental data.  Check your internet connection, and make sure the transcript id is of the format 'ENST00000378357' so the correct species data can be downloaded"]))
+            logging.warning(" ".join(["Error in downloading experimental data.  Check your internet connection."]))
+            experimental_data_present = False
+
+    return experimental_data_present
 
         
 def experimentaldata(target_species):
@@ -643,7 +692,7 @@ def species_specific_data(target_species, chromosome, species_specific_data_dir)
     if os.path.exists(gtrd_data_dir):
         gtrd_metaclusters_chrom_dict_filename = os.path.join(gtrd_data_dir, ".".join([target_species, "metaclusters", "interval", "Chr"+chromosome.upper(), "clipped", "ordered", "tupled", "msg"]))
         if os.path.exists(gtrd_metaclusters_chrom_dict_filename):
-            gtrd_metaclusters_dict = load_msgpack(gtrd_metaclusters_chrom_dict_filename)            
+            gtrd_metaclusters_dict = load_msgpack(gtrd_metaclusters_chrom_dict_filename)
             
     # load metacluster overlap weights
     metacluster_overlap_weights_dict = {}
@@ -833,8 +882,8 @@ def tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, t
         # Use empirical data from whole human genome, but limited to within -2000/+200 bp of TSSs
         # http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0033204
         # http://journals.plos.org/plosone/article/file?type=supplementary&id=info:doi/10.1371/journal.pone.0033204.s023
-##            bg_nuc_freq_dict = {'A':0.247, 'C':0.251, 'G':0.254, 'T':0.248}
-##            neg_bg_nuc_freq_dict = {'A':0.247, 'C':0.251, 'G':0.254, 'T':0.248}
+    ##            bg_nuc_freq_dict = {'A':0.247, 'C':0.251, 'G':0.254, 'T':0.248}
+    ##            neg_bg_nuc_freq_dict = {'A':0.247, 'C':0.251, 'G':0.254, 'T':0.248}
 
         # https://arxiv.org/pdf/q-bio/0611041.pdf
         # empirical data from complete genome
@@ -878,15 +927,15 @@ def tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, t
                             current_frame_score = PWM_scorer(current_frame, pwm, mononuc_pwm_dict, 'mono')
 
                             # keep results that are above the precomputed threshold
-##                            if current_frame_score >= tf_pwm_score_threshold:
+    ##                            if current_frame_score >= tf_pwm_score_threshold:
                             if current_frame_score >= tf_pwm_score_threshold:    
                                 current_frame_score = round(current_frame_score, 2)
                                 
                                 pval_index = bisect_left(scores_list_sorted, current_frame_score)
                                 if pval_index >= len(pvals_scores_list_sorted):
                                     pval_index = -1
-##                                elif pval_index == 0:
-##                                    pval_index == 0
+    ##                                elif pval_index == 0:
+    ##                                    pval_index == 0
                                 else:
                                     pval_index -= 1
 
@@ -916,8 +965,8 @@ def tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, t
 ##            tfbss_found_dict[tf_name] = sorted(hits, key = itemgetter(10))
 ##            tfbss_found_dict[tf_name] = sorted(hits, key = itemgetter(3))
             
-        # save the results to file
-        dump_json(tfbss_found_dict_outfilename, tfbss_found_dict)
+##        # save the results to file
+##        dump_json(tfbss_found_dict_outfilename, tfbss_found_dict)
 
     end_time = time.time()
     logging.info(" ".join(["total time for tfbs_finder() for this transcript:", str(end_time - start_time), "seconds"]))
@@ -972,58 +1021,66 @@ def find_clusters(ens_gene_id, chr_start, chr_end, alignment, target_species, ch
     If two target species hits are within the locality threshold from one another, choose the hit which has the highest combined affinity score.
     """
     start_time = time.time()
+        
     cluster_dict = {}
-    cage_correlations_hit_tf_dict = {}
     
     for tf_name, hits in tfbss_found_dict.iteritems():
+        
         if len(hits) > 0:
+            cluster_dict[tf_name] = []
             tf_len = len(hits[0][1])
             target_cages, tf_cages = cage_correlations_summing_preparation(transcript_id, cage_dict, TF_cage_dict, tf_name, jasparTFs_transcripts_dict)        
             eqtl_occurrence_log_likelihood = eqtl_overlap_likelihood(converted_eqtls, chr_start, chr_end, tf_len, gene_len, gtex_variants, ens_gene_id)
 
-        for hit in hits:
-            # ref-point
-            combined_affinity_score = 0
-            target_species_hit = hit
-            target_species_pwm_score = target_species_hit[7]
-            species_weights_sum = 0
-            cage_weights_sum = 0
-            eqtls_weights_sum = 0
-            atac_weights_sum = 0
-            metacluster_weights_sum = 0
-            corr_weight_sum = 0
-            tf_len = len(hit[1])
+            for hit in hits:
+                # ref-point
+                combined_affinity_score = 0
+                target_species_hit = hit
+                target_species_pwm_score = target_species_hit[7]
+                species_weights_sum = 0
+                cage_weights_sum = 0
+                eqtls_weights_sum = 0
+                atac_weights_sum = 0
+                metacluster_weights_sum = 0
+                corr_weight_sum = 0
+                tf_len = len(hit[1])
 
-            # datasets only available for homo sapiens
-            if target_species == "homo_sapiens":
-                cage_weights_sum = cage_weights_summing(transcript_id, target_species_hit, cage_dist_weights_dict, converted_cages)
-                eqtls_weights_sum = eqtls_weights_summing(eqtl_occurrence_log_likelihood, ens_gene_id, target_species_hit, converted_eqtls, gtex_weights_dict, chr_start, chr_end, gtex_variants, tf_len, gene_len)
-                atac_weights_sum = atac_weights_summing(transcript_id, target_species_hit, atac_dist_weights_dict, converted_atac_seqs_in_promoter)
-                metacluster_weights_sum = metacluster_weights_summing(transcript_id, target_species_hit, metacluster_overlap_weights_dict, converted_metaclusters_in_promoter)
-                corr_weight_sum, cage_correlations_hit_tf_dict = cage_correlations_summing(target_species_hit, transcript_id, target_cages, tf_cages, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict, cage_correlations_hit_tf_dict)
+                # datasets only available for homo sapiens
+                if target_species == "homo_sapiens":
+                    cage_weights_sum = cage_weights_summing(transcript_id, target_species_hit, cage_dist_weights_dict, converted_cages)
+                    eqtls_weights_sum = eqtls_weights_summing(eqtl_occurrence_log_likelihood, ens_gene_id, target_species_hit, converted_eqtls, gtex_weights_dict, chr_start, chr_end, gtex_variants, tf_len, gene_len)
+                    atac_weights_sum = atac_weights_summing(transcript_id, target_species_hit, atac_dist_weights_dict, converted_atac_seqs_in_promoter)
+                    metacluster_weights_sum = metacluster_weights_summing(transcript_id, target_species_hit, metacluster_overlap_weights_dict, converted_metaclusters_in_promoter)
+    ##                corr_weight_sum, cage_correlations_hit_tf_dict = cage_correlations_summing(target_species_hit, transcript_id, target_cages, tf_cages, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict, cage_correlations_hit_tf_dict)
+                    corr_weight_sum = cage_correlations_summing(target_species_hit, transcript_id, target_cages, tf_cages, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict)
 
-            species_weights_sum = gerp_weights_summing(target_species, transcript_id, chromosome, target_species_hit, gerp_conservation_weight_dict, converted_gerps_in_promoter)    
-            cpg_weight = cpg_weights_summing(transcript_id, target_species_hit, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, cpg_list)
+                species_weights_sum = gerp_weights_summing(target_species, transcript_id, chromosome, target_species_hit, gerp_conservation_weight_dict, converted_gerps_in_promoter)    
+                cpg_weight = cpg_weights_summing(transcript_id, target_species_hit, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, cpg_list)
 
-            # calculate the complete score (combined affinity)
-            experimental_weights = [species_weights_sum, cage_weights_sum, eqtls_weights_sum, atac_weights_sum, metacluster_weights_sum, cpg_weight, corr_weight_sum]
-            combined_affinity_score += sum(experimental_weights) + target_species_pwm_score
-            combined_affinity_score = round(combined_affinity_score, 2)
+                # calculate the complete score (combined affinity)
+                experimental_weights = [species_weights_sum, cage_weights_sum, eqtls_weights_sum, atac_weights_sum, metacluster_weights_sum, cpg_weight, corr_weight_sum]
+                combined_affinity_score += sum(experimental_weights) + target_species_pwm_score
+                combined_affinity_score = round(combined_affinity_score, 2)
 
-            hit.append(combined_affinity_score)
-        
-            experimental_weights_rounded = [round(x, 2) for x in experimental_weights]
-            hit += experimental_weights_rounded
+                hit.append(combined_affinity_score)
+            
+                experimental_weights_rounded = [round(x, 2) for x in experimental_weights]
+                hit += experimental_weights_rounded
+                cluster_dict[tf_name].append(hit)
+                
+##                if tf_name in cluster_dict:
+##                    cluster_dict[tf_name].append([hit])
+##                else:
+##                    cluster_dict[tf_name] = [hit]
 
-            if tf_name in cluster_dict:
-                cluster_dict[tf_name].append([hit])
-            else:
-                cluster_dict[tf_name] = [[hit]]
+##    for tf_name, hits in cluster_dict.iteritems():
+##        cluster_dict[tf_name] = thits)
 
     total_time = time.time() - start_time
     logging.info(" ".join(["total time for find_clusters() for this transcript:", str(total_time), "seconds"]))
     
-    return cluster_dict, cage_correlations_hit_tf_dict
+##    return cluster_dict, cage_correlations_hit_tf_dict
+    return cluster_dict
 
 
 ##def alignment_info_content(aligned_filename):
@@ -1216,10 +1273,10 @@ def eqtls_weights_summing(eqtl_occurrence_log_likelihood, ens_gene_id, target_sp
             converted_eqtl_end = converted_eqtl[1]
             converted_eqtl_score_mag = abs(converted_eqtl[2])
 
-##            overlap = overlap_range([motif_start, motif_end], [converted_eqtl_start, converted_eqtl_end])
-            if motif_start<=converted_eqtl_start<=motif_end or motif_start<=converted_eqtl_end<=motif_end:
+            overlap = overlap_range([motif_start, motif_end], [converted_eqtl_start, converted_eqtl_end])
+##            if motif_start<=converted_eqtl_start<=motif_end or motif_start<=converted_eqtl_end<=motif_end:
 
-##            if len(overlap) > 0:
+            if len(overlap) > 0:
                 eqtl_weight = gtex_weights_dict[converted_eqtl_score_mag]
                 eqtl_weights.append(eqtl_weight + eqtl_occurrence_log_likelihood)
 
@@ -1264,7 +1321,8 @@ def cage_correlations_summing_preparation(transcript_id, cage_dict, TF_cage_dict
     return target_cages, tf_cages
 
 
-def cage_correlations_summing(target_species_hit, transcript_id, target_cages, tf_cages, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict, cage_correlations_hit_tf_dict):
+##def cage_correlations_summing(target_species_hit, transcript_id, target_cages, tf_cages, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict, cage_correlations_hit_tf_dict):
+def cage_correlations_summing(target_species_hit, transcript_id, target_cages, tf_cages, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict):
     """
     Extract correlation values between CAGEs associated with a predicted TFBS protein,
     and CAGEs associated with the current gene.
@@ -1276,8 +1334,6 @@ def cage_correlations_summing(target_species_hit, transcript_id, target_cages, t
     # cages for all transcripts of the predicted TFBS's proteins
     tf_name = target_species_hit[0]
 
-##    if transcript_id in cage_dict:
-##        # iterate through all target cage vs tf cage combinations and sum correlation weights
     for tf_cage in tf_cages:
         if tf_cage in cage_keys_dict:
             tf_cage_key = cage_keys_dict[tf_cage]
@@ -1299,9 +1355,10 @@ def cage_correlations_summing(target_species_hit, transcript_id, target_cages, t
         corr_weights_ls.sort()
         corr_weight_sum = corr_weights_ls[-1]
 
-    cage_correlations_hit_tf_dict[tf_name] = corr_weight_sum
+##    cage_correlations_hit_tf_dict[tf_name] = corr_weight_sum
     
-    return corr_weight_sum, cage_correlations_hit_tf_dict
+##    return corr_weight_sum, cage_correlations_hit_tf_dict
+    return corr_weight_sum
            
 
 def cage_weights_summing(transcript_id, target_species_hit, cage_dist_weights_dict, converted_cages):
@@ -1410,7 +1467,10 @@ def metacluster_weights_summing(transcript_id, target_species_hit, metacluster_o
         transcript_metacluster_start = converted_metacluster[0]
         transcript_metacluster_end = converted_metacluster[1]
 
-        if transcript_metacluster_start<=motif_start<=transcript_metacluster_end or transcript_metacluster_start<=motif_end<=transcript_metacluster_end:
+        # doesn't work clusters are bigger than motifs
+##        if transcript_metacluster_start<=motif_start<=transcript_metacluster_end or transcript_metacluster_start<=motif_end<=transcript_metacluster_end:
+        overlap = overlap_range([motif_start, motif_end], [transcript_metacluster_start, transcript_metacluster_end])
+        if len(overlap)>0:
             num_ovelapping_metaclusters += 1
 
     if num_ovelapping_metaclusters in metacluster_overlap_weights_dict:
@@ -1554,8 +1614,9 @@ def sort_target_species_hits(cluster_dict):
 
     for tf_name, hits in cluster_dict.iteritems():
         for hit in hits:
-            sorted_clusters_target_species_hits_list += hit
-
+            sorted_clusters_target_species_hits_list.append(hit)
+##            sorted_clusters_target_species_hits_list += hit
+            
     # ref-point
     sorted_clusters_target_species_hits_list = sorted(sorted_clusters_target_species_hits_list, key=itemgetter(9), reverse = True)
     return sorted_clusters_target_species_hits_list
@@ -1628,11 +1689,12 @@ def retrieve_genome_aligned(target_species, chromosome, strand, promoter_start, 
     pre_options = target_species + "/" + chromosome + ":" + str(promoter_start) + "-" + str(promoter_end) + ":" + str(strand)
     options = pre_options + "?content-type=application/json"
     target_only_decoded = ensemblrest(query_type, options, 'json', "", log=True)
-    target_only_decoded['species'] = target_species
-    alignment = [target_only_decoded]
+    if 'seq' in target_only_decoded:
+        target_only_decoded['species'] = target_species
+        alignment = [target_only_decoded]
 
-##        else:
-##            alignment = []
+    else:
+        alignment = []
 
     return alignment
 
@@ -1642,7 +1704,7 @@ def fasta_writer(alignment, outfile):
     Write ensembl JSON alignment to fasta file.
     """
     
-    if not os.path.isfile(outfile):
+    if not os.path.isfile(outfile) or (os.path.isfile(outfile) and os.path.getsize(outfile) == 0):
         with open(outfile, "w") as aligned_file:
             for entry in alignment:
                 record = SeqRecord(Seq(entry['seq'], alphabet = IUPAC.ambiguous_dna), id = entry['species'], description = "")
@@ -1768,7 +1830,7 @@ def alignment_tools(ensembl_aligned_filename, cleaned_aligned_filename, target_s
     if not os.path.isfile(cleaned_aligned_filename) or (os.path.isfile(cleaned_aligned_filename) and os.path.getsize(cleaned_aligned_filename) == 0):
 
         # If uncleaned Ensembl alignment file doesn't exist, or the size is zero: retrieve from Ensembl, write to file.
-        if not os.path.isfile(ensembl_aligned_filename) or (os.path.isfile(ensembl_aligned_filename) and os.path.getsize(ensembl_aligned_filename) == 0):        
+        if not os.path.isfile(ensembl_aligned_filename) or (os.path.isfile(ensembl_aligned_filename) and os.path.getsize(ensembl_aligned_filename) == 0):
             alignment = retrieve_genome_aligned(target_species, chromosome, strand, promoter_start, promoter_end)
             fasta_writer(alignment, ensembl_aligned_filename)   
 
@@ -2231,26 +2293,22 @@ def gtrd_positions_translate(target_dir, gtrd_metaclusters_dict, chromosome, str
 
     # convert the positions of the in-promoter metaclusters to tss-relative
     converted_metaclusters_in_promoter = []
-    gtrd_outfilename = os.path.join(target_dir, os.path.basename(target_dir) + '.gtrd.txt')
-    with open(gtrd_outfilename, 'w') as gtrd_outfile:
-        for metacluster_in_promoter in metaclusters_in_promoter:
-            metacluster_start = metacluster_in_promoter[0]
-            metacluster_end = metacluster_start + metacluster_in_promoter[1]
-            metacluster_peak_count = metacluster_in_promoter[2]
+##    gtrd_outfilename = os.path.join(target_dir, os.path.basename(target_dir) + '.gtrd.txt')
+##    with open(gtrd_outfilename, 'w') as gtrd_outfile:
+    for metacluster_in_promoter in metaclusters_in_promoter:
+        metacluster_start = metacluster_in_promoter[0]
+        metacluster_end = metacluster_start + metacluster_in_promoter[1]
+        metacluster_peak_count = metacluster_in_promoter[2]
 
-            if strand == 1:
-                converted_metacluster_start = (tss - metacluster_start) * -1
-                converted_metacluster_end = (tss - metacluster_end) * -1
-            if strand == -1:
-                converted_metacluster_start = (tss - metacluster_start)
-                converted_metacluster_end = (tss - metacluster_end)
+        if strand == 1:
+            converted_metacluster_start = (tss - metacluster_start) * -1
+            converted_metacluster_end = (tss - metacluster_end) * -1
+        if strand == -1:
+            converted_metacluster_start = (tss - metacluster_start)
+            converted_metacluster_end = (tss - metacluster_end)
 
-            converted_metacluster = [converted_metacluster_start, converted_metacluster_end, metacluster_peak_count]
-            converted_metaclusters_in_promoter.append(converted_metacluster)
-
-            gtrd_outfile.write(str(metacluster_in_promoter)+"\n")
-            gtrd_outfile.write(str(converted_metacluster)+"\n")
-
+        converted_metacluster = [converted_metacluster_start, converted_metacluster_end, metacluster_peak_count]
+        converted_metaclusters_in_promoter.append(converted_metacluster)
 
     return converted_metaclusters_in_promoter
 
@@ -2320,7 +2378,8 @@ def atac_pos_translate(atac_seq_dict, chromosome, strand, promoter_start, promot
     return converted_atac_seqs_in_promoter
     
 
-def plot_promoter(target_species, transcript_id, species_group, alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, converted_gerps_in_promoter, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, cage_correlations_hit_tf_dict):
+##def plot_promoter(target_species, transcript_id, species_group, alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, converted_gerps_in_promoter, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, cage_correlations_hit_tf_dict):
+def plot_promoter(target_species, transcript_id, species_group, alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, converted_gerps_in_promoter, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls):
     """
     Plot the predicted TFBSs, onto a 5000 nt promoter graph, which possess support above the current strand threshold.
     ['binding_prot', 'species', 'motif', 'strand', 'start', 'end', 'TSS-relative start', 'TSS-relative end', 'frame score', 'p-value', 'pos in align.', 'combined affinity score', 'support']
@@ -2453,7 +2512,10 @@ def plot_promoter(target_species, transcript_id, species_group, alignment, align
     # All will be horizontally plotted in some shade of red
     if len(converted_reg_dict) > 0:
         alpha_gradient = 1.0
-        alpha_gradient_dict = {1:0, 2:0.5, 3:0.25, 4:0.225}
+##        alpha_gradient_dict = {1:0, 2:0.5, 3:0.25, 4:0.225}
+        alpha_gradient_dict = {1:0}
+        for i in range(2,100):
+            alpha_gradient_dict[i] = 1./i
         reg_height = 1
         reg_height = (tens_y * 1.0)/4 
         for reg_id, data in converted_reg_dict.iteritems():
@@ -2616,7 +2678,10 @@ def plot_promoter(target_species, transcript_id, species_group, alignment, align
 
         ### AX8: cage_correlations
         # rebuild dict to have just the top correlation
-        plot_tfs_corrs_colors = [(tf_name, cage_correlations_hit_tf_dict[tf_name], color_dict[tf_name]) if tf_name in cage_correlations_hit_tf_dict else (tf_name, 0, color_dict[tf_name]) for tf_name in top_x_greatest_hits_dict]
+        # ref-point
+##        plot_tfs_corrs_colors = [(tf_name, cage_correlations_hit_tf_dict[tf_name], color_dict[tf_name]) if tf_name in cage_correlations_hit_tf_dict else (tf_name, 0, color_dict[tf_name]) for tf_name in top_x_greatest_hits_dict]
+        plot_tfs_corrs_colors = [(tf_name, hits_list[0][16],  color_dict[tf_name]) for tf_name, hits_list in top_x_greatest_hits_dict.iteritems()]
+                                 
         plot_tfs_corrs_colors_sorted = sorted(plot_tfs_corrs_colors, key=itemgetter(1), reverse=True)
         ax8.bar(range(0, len(plot_tfs_corrs_colors_sorted)), [x[1] for x in plot_tfs_corrs_colors_sorted], color=[x[2] for x in plot_tfs_corrs_colors_sorted], edgecolor = "none")
         ax8.set_ylim(0, plot_tfs_corrs_colors_sorted[0][1]+1)
@@ -2684,158 +2749,154 @@ def main():
     total_time_start = time.time()
     print("Executing tfbs_footprinter version %s." % __version__)
 
+    # Create directory for results
+    output_dir = os.path.join(curdir, "tfbs_results")
+    directory_creator(output_dir)
+
+    # begin timing and logging
+    logging.basicConfig(filename=os.path.join(os.path.dirname(output_dir), 'TFBS_footprinter.log'), level=logging.INFO, format='%(asctime)s:    [%(levelname)s]    %(message)s')
+    logging.info(" ".join(["***NEW SET OF ANALYSES HAS BEGUN***"]))
+
     if is_online():
         args_lists, exp_data_update = get_args()
 
         # if experimental data dir does not exist or user has requested an exp data update, then update.
-        experimentalDataUpdater(exp_data_update)
+        experimental_data_present = experimentalDataUpdater(exp_data_update)
 
-        if len(args_lists) > 0:
+        if experimental_data_present:
+            if len(args_lists) > 0:                
+                # analysis variables
+                # non-species-specific
+                # dictionary of thresholds for each TF
+                ##    # updated version, which requires the presence of a current versions file
+                ##    pwm_score_threshold_dict_filename = os.path.join(experimental_data_dir, current_versions["jaspar_thresholds"])
+                pwm_score_threshold_dict_filename = os.path.join(script_dir, 'data/all_tfs_thresholds.jaspar_2018.1.json')        
+                pwm_score_threshold_dicta = load_json(pwm_score_threshold_dict_filename)
+                pwm_score_threshold_dict = {}
+                for k,v in pwm_score_threshold_dicta.iteritems():
+                    pwm_score_threshold_dict[k] = {float(kk):float(vv) for kk,vv in v.iteritems()}
 
-            # Create directory for results
-            output_dir = os.path.join(curdir, "tfbs_results")
-            directory_creator(output_dir)
+                # load mono-nuc PFMs
+                TFBS_matrix_filename = os.path.join(script_dir, 'data/pwms.json')
+                TFBS_matrix_dict = load_json(TFBS_matrix_filename)
+                TFBS_matrix_dict = {k.upper():v for k,v in TFBS_matrix_dict.iteritems()}
 
-            # begin timing and logging
-            logging.basicConfig(filename=os.path.join(os.path.dirname(output_dir), 'TFBS_footprinter.log'), level=logging.INFO, format='%(asctime)s:    [%(levelname)s]    %(message)s')
-            logging.info(" ".join(["***NEW SET OF ANALYSES HAS BEGUN***"]))
-            
-            # analysis variables
-            # non-species-specific
-            # dictionary of thresholds for each TF
-            ##    # updated version, which requires the presence of a current versions file
-            ##    pwm_score_threshold_dict_filename = os.path.join(experimental_data_dir, current_versions["jaspar_thresholds"])
-            pwm_score_threshold_dict_filename = os.path.join(script_dir, 'data/all_tfs_thresholds.jaspar_2018.1.json')        
-            pwm_score_threshold_dicta = load_json(pwm_score_threshold_dict_filename)
-            pwm_score_threshold_dict = {}
-            for k,v in pwm_score_threshold_dicta.iteritems():
-                pwm_score_threshold_dict[k] = {float(kk):float(vv) for kk,vv in v.iteritems()}
+                # load JASPAR PWM score weights
+                all_pwms_loglikelihood_dict_filename = os.path.join(script_dir, 'data/all_pwms_loglikelihood_dict.reduced.msg')
+                all_pwms_loglikelihood_dict = load_msgpack(all_pwms_loglikelihood_dict_filename)
 
-            # load mono-nuc PFMs
-            TFBS_matrix_filename = os.path.join(script_dir, 'data/pwms.json')
-            TFBS_matrix_dict = load_json(TFBS_matrix_filename)
-            TFBS_matrix_dict = {k.upper():v for k,v in TFBS_matrix_dict.iteritems()}
+                last_target_species = None
+                
+            for i, args_list in enumerate(args_lists):
+                args, transcript_ids_filename, transcript_id, target_tfs_filename, promoter_before_tss, promoter_after_tss, top_x_tfs_count, pval = args_list
+                print "Ensembl transcript id:", transcript_id
+                logging.info(" ".join(["***ANALYSIS OF A NEW TRANSCRIPT HAS BEGUN:", transcript_id]))
+                logging.info(" ".join(["Arguments used in this run:", str(args_list)]))
 
-            # load JASPAR PWM score weights
-            all_pwms_loglikelihood_dict_filename = os.path.join(script_dir, 'data/all_pwms_loglikelihood_dict.reduced.msg')
-            all_pwms_loglikelihood_dict = load_msgpack(all_pwms_loglikelihood_dict_filename)
+                # target dir naming
+                start_end = "("+"_".join([str(promoter_before_tss), str(promoter_after_tss)])+")"
+                target_dir_name = "_".join([transcript_id+start_end, str(pval)])
+                target_dir = os.path.join(output_dir, target_dir_name)
 
-            last_target_species = None
-            
-        for i, args_list in enumerate(args_lists):
-##            args, transcript_ids_filename, transcript_id, target_tfs_filename, species_group, coverage, promoter_before_tss, promoter_after_tss, top_x_tfs_count, pval = args_list
-            args, transcript_ids_filename, transcript_id, target_tfs_filename, promoter_before_tss, promoter_after_tss, top_x_tfs_count, pval = args_list
-            print "Ensembl transcript id:", transcript_id
-            logging.info(" ".join(["***ANALYSIS OF A NEW TRANSCRIPT HAS BEGUN:", transcript_id]))
-            logging.info(" ".join(["Arguments used in this run:", str(args_list)]))
+                # check if results have been created for this query ***check multiple files also (e.g. output table and figure)***.
+                cluster_dict_filename = os.path.join(target_dir, "cluster_dict.msg")
+                if not os.path.exists(cluster_dict_filename):
 
-            # target dir naming
-            start_end = "("+"_".join([str(promoter_before_tss), str(promoter_after_tss)])+")"
-##            target_dir_name = "_".join([target_species, transcript_id+start_end, str(pval)])
-            target_dir_name = "_".join([transcript_id+start_end, str(pval)])
-            target_dir = os.path.join(output_dir, target_dir_name)
+                    # identify if the target transcript id exists in Ensembl
+                    transcript_dict_filename = os.path.join(target_dir, "transcript_dict.json")
 
-            # check if results have been created for this query ***check multiple files also (e.g. output table and figure)***.
-            if not os.path.exists(os.path.join(target_dir, "TFBSs_found.sortedclusters.csv")):
+                    decoded_json_description = transfabulator(transcript_id, transcript_dict_filename)
+                    transcript_id_pass = test_transcript_id(decoded_json_description, transcript_id)
 
-                # identify if the target transcript id exists in Ensembl
-                transcript_dict_filename = os.path.join(target_dir, "transcript_dict.json")
-
-                decoded_json_description = transfabulator(transcript_id, transcript_dict_filename)
-                transcript_id_pass = test_transcript_id(decoded_json_description, transcript_id)
-
-                # parse target transcript id data from successful retrieval, and continue
-                if transcript_id_pass:
-                    # create target output dir 
-                    directory_creator(target_dir)
-                    logging.info(" ".join(["Results will be output to:", target_dir]))
-                    target_species, transcript_name, ens_gene_id, chromosome, tss, strand, promoter_start, promoter_end, chr_start, chr_end = transcript_data_retrieve(decoded_json_description, transcript_dict_filename, promoter_before_tss, promoter_after_tss)
-                    gene_len = gene_data_retrieve(ens_gene_id)
-                    
-                    # species-specific
-                    species_specific_data_dir = os.path.join(script_dir, 'data', target_species)
-    ##                if i == 0 or (i>0 and args_lists[i-1][4] != target_species):
-                    experimentaldata(target_species)
-                    if target_species != last_target_species or chromosome != last_chromosome:
-                        if os.path.exists(species_specific_data_dir):
-                            gerp_conservation_locations_dict, gerp_conservation_weight_dict, species_group, cage_dict, TF_cage_dict, cage_dist_weights_dict, cage_correlations_dict, cage_corr_weights_dict, cage_keys_dict, jasparTFs_transcripts_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, gtex_variants, gtex_weights_dict, gtrd_metaclusters_dict, atac_seq_dict = species_specific_data(target_species, chromosome, species_specific_data_dir)
-                        last_target_species = target_species
-                        last_chromosome = chromosome
-                    
-                    # load target tfs
-                    if target_tfs_filename == "" or target_tfs_filename == None:
-                        target_tfs_filename = None
-                        target_tfs_list = TFBS_matrix_dict.keys()
-
-                    if target_tfs_filename != None:
-                        target_tfs_list = parse_tf_ids(target_tfs_filename)
-                        target_tfs_list = compare_tfs_list_jaspar(target_tfs_list, TFBS_matrix_dict)
-
-
-                    # filenames for alignment and ensembl regulatory data
-                    ensembl_aligned_filename = os.path.join(target_dir, "alignment_uncleaned.fasta")
-                    cleaned_aligned_filename = os.path.join(target_dir, "alignment_cleaned.fasta")
-                    alignment = alignment_tools(ensembl_aligned_filename, cleaned_aligned_filename, target_species, chromosome, strand, promoter_start, promoter_end)
-
-                    # continue if there is an alignment from Ensembl, and after cleaning
-                    if len(alignment) > 0:
-
-                        target_species_row = alignment[0]
-                        alignment_len = len(target_species_row['seq'].replace('-',''))
-
-                        # retrieve regulatory
-                        regulatory_decoded_filename = os.path.join(target_dir, "regulatory_decoded.json")
-                        regulatory_decoded = retrieve_regulatory(chromosome, strand, promoter_start, promoter_end, regulatory_decoded_filename, target_species)
-                        converted_reg_dict = reg_position_translate(tss,regulatory_decoded,promoter_start,promoter_end,strand,promoter_before_tss,promoter_after_tss)
-
-                        # conservation
-                        converted_gerps_in_promoter = gerp_positions_translate(target_dir, gerp_conservation_locations_dict, chromosome, strand, promoter_start, promoter_end, tss)
-
-                        # identify information content of each column of the alignment
-        ##                info_content_dict = alignment_info_content(cleaned_aligned_filename)
-    ##                    info_content_dict = alignment_summary(alignment)
-                        cpg_list = CpG(cleaned_aligned_filename)
-
-                        # identify CAGEs in proximity to Ensembl TSS, convert for plotting
-                        converted_cages = cage_position_translate(transcript_id,tss,cage_dict,promoter_start,promoter_end,strand,promoter_before_tss,promoter_after_tss)
-
-                        # identify eQTLs in proximity to Ensembl TSS, convert for plotting
-                        converted_eqtls = gtex_position_translate(ens_gene_id,gtex_variants,tss,promoter_start,promoter_end,strand,promoter_before_tss,promoter_after_tss)
-
-                        # GTRD metaclusters
-                        converted_metaclusters_in_promoter = gtrd_positions_translate(target_dir, gtrd_metaclusters_dict, chromosome, strand, promoter_start, promoter_end, tss)
-
-                        # ATAC-seq data
-                        converted_atac_seqs_in_promoter = atac_pos_translate(atac_seq_dict, chromosome, strand, promoter_start, promoter_end, tss)
-
-                        # create index of aligned to unaligned positions
-                        unaligned2aligned_index_dict = unaligned2aligned_indexes(cleaned_aligned_filename)
-
-                        # score alignment for tfbss
-                        tfbss_found_dict = tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, target_dir, pwm_score_threshold_dict, all_pwms_loglikelihood_dict, unaligned2aligned_index_dict, promoter_after_tss, pval)
+                    # parse target transcript id data from successful retrieval, and continue
+                    if transcript_id_pass:
+                        # create target output dir 
+                        directory_creator(target_dir)
+                        logging.info(" ".join(["Results will be output to:", target_dir]))
+                        target_species, transcript_name, ens_gene_id, chromosome, tss, strand, promoter_start, promoter_end, chr_start, chr_end = transcript_data_retrieve(decoded_json_description, transcript_dict_filename, promoter_before_tss, promoter_after_tss)
+                        gene_len = gene_data_retrieve(ens_gene_id)
                         
-                        # sort through scores, identify hits in target_species supported in other species
-                        cluster_dict, cage_correlations_hit_tf_dict = find_clusters(ens_gene_id, chr_start, chr_end, alignment, target_species, chromosome, tfbss_found_dict, cleaned_aligned_filename, converted_gerps_in_promoter, gerp_conservation_weight_dict,  converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, TF_cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict, gtex_variants, gene_len)
+                        # species-specific
+                        species_specific_data_dir = os.path.join(script_dir, 'data', target_species)
+                        experimentaldata(target_species)
+                        if target_species != last_target_species or chromosome != last_chromosome:
+                            if os.path.exists(species_specific_data_dir):
+                                gerp_conservation_locations_dict, gerp_conservation_weight_dict, species_group, cage_dict, TF_cage_dict, cage_dist_weights_dict, cage_correlations_dict, cage_corr_weights_dict, cage_keys_dict, jasparTFs_transcripts_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, gtex_variants, gtex_weights_dict, gtrd_metaclusters_dict, atac_seq_dict = species_specific_data(target_species, chromosome, species_specific_data_dir)
+                            last_target_species = target_species
+                            last_chromosome = chromosome
                         
-                        tfbss_found_dict.clear()
-                        
-        ##                # write cluster entries to .csv\
-        ##                # no longer needed if basing analysis on overall conservation vs clusters of high-scoring hits in multiple species
-        ##                cluster_table_writer(cluster_dict, target_dir, ".clusters.")
+                        # load target tfs
+                        if target_tfs_filename == "" or target_tfs_filename == None:
+                            target_tfs_filename = None
+                            target_tfs_list = TFBS_matrix_dict.keys()
 
-                        # sort the target_species hits supported by other species
-                        sorted_clusters_target_species_hits_list = sort_target_species_hits(cluster_dict)
-                        target_species_hits_table_writer(sorted_clusters_target_species_hits_list, target_dir, ".sortedclusters.")
-                        
-                        # extract the top x target_species hits supported by other species
-                        top_x_greatest_hits_dict = top_x_greatest_hits(sorted_clusters_target_species_hits_list, top_x_tfs_count)
+                        if target_tfs_filename != None:
+                            target_tfs_list = parse_tf_ids(target_tfs_filename)
+                            target_tfs_list = compare_tfs_list_jaspar(target_tfs_list, TFBS_matrix_dict)
 
-    ##                    # plot the top x target_species hits
-                        if len(top_x_greatest_hits_dict) > 0:
-                            plot_promoter(target_species, transcript_id, species_group, alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, converted_gerps_in_promoter, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, cage_correlations_hit_tf_dict)
+                        # filenames for alignment and ensembl regulatory data
+                        ensembl_aligned_filename = os.path.join(target_dir, "alignment_uncleaned.fasta")
+                        cleaned_aligned_filename = os.path.join(target_dir, "alignment_cleaned.fasta")
+                        alignment = alignment_tools(ensembl_aligned_filename, cleaned_aligned_filename, target_species, chromosome, strand, promoter_start, promoter_end)
 
-        total_time_end = time.time()
-        logging.info(" ".join(["Total time for", str(len(args_lists)), "transcripts:", str(total_time_end - total_time_start), "seconds"]) + "\n\n")
+                        # continue if there is an alignment from Ensembl, and after cleaning
+                        if len(alignment) > 0:
+
+                            target_species_row = alignment[0]
+                            alignment_len = len(target_species_row['seq'].replace('-',''))
+
+                            # retrieve regulatory
+                            regulatory_decoded_filename = os.path.join(target_dir, "regulatory_decoded.json")
+                            regulatory_decoded = retrieve_regulatory(chromosome, strand, promoter_start, promoter_end, regulatory_decoded_filename, target_species)
+                            converted_reg_dict = reg_position_translate(tss,regulatory_decoded,promoter_start,promoter_end,strand,promoter_before_tss,promoter_after_tss)
+
+                            # conservation
+                            converted_gerps_in_promoter = gerp_positions_translate(target_dir, gerp_conservation_locations_dict, chromosome, strand, promoter_start, promoter_end, tss)
+
+                            # identify information content of each column of the alignment
+                            cpg_list = CpG(cleaned_aligned_filename)
+
+                            # identify CAGEs in proximity to Ensembl TSS, convert for plotting
+                            converted_cages = cage_position_translate(transcript_id,tss,cage_dict,promoter_start,promoter_end,strand,promoter_before_tss,promoter_after_tss)
+
+                            # identify eQTLs in proximity to Ensembl TSS, convert for plotting
+                            converted_eqtls = gtex_position_translate(ens_gene_id,gtex_variants,tss,promoter_start,promoter_end,strand,promoter_before_tss,promoter_after_tss)
+
+                            # GTRD metaclusters
+                            converted_metaclusters_in_promoter = gtrd_positions_translate(target_dir, gtrd_metaclusters_dict, chromosome, strand, promoter_start, promoter_end, tss)
+
+                            # ATAC-seq data
+                            converted_atac_seqs_in_promoter = atac_pos_translate(atac_seq_dict, chromosome, strand, promoter_start, promoter_end, tss)
+
+                            # create index of aligned to unaligned positions
+                            unaligned2aligned_index_dict = unaligned2aligned_indexes(cleaned_aligned_filename)
+
+                            cluster_dict_json_filename = os.path.join(target_dir, "cluster_dict.json")
+                            if not os.path.exists(cluster_dict_filename):
+                                # score alignment for tfbss
+                                tfbss_found_dict = tfbs_finder(transcript_name, alignment, target_tfs_list, TFBS_matrix_dict, target_dir, pwm_score_threshold_dict, all_pwms_loglikelihood_dict, unaligned2aligned_index_dict, promoter_after_tss, pval)
+                                
+                                # sort through scores, identify hits in target_species supported in other species
+                                cluster_dict = find_clusters(ens_gene_id, chr_start, chr_end, alignment, target_species, chromosome, tfbss_found_dict, cleaned_aligned_filename, converted_gerps_in_promoter, gerp_conservation_weight_dict,  converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, TF_cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict, gtex_variants, gene_len)                            
+                                tfbss_found_dict.clear()
+                                dump_json(cluster_dict_json_filename, cluster_dict)
+
+                            else:
+                                cluster_dict = load_json(cluster_dict_filename)
+
+                            # sort the target_species hits supported by other species
+                            sorted_clusters_target_species_hits_list = sort_target_species_hits(cluster_dict)
+                            target_species_hits_table_writer(sorted_clusters_target_species_hits_list, target_dir, ".sortedclusters.")
+                            
+                            # extract the top x target_species hits supported by other species
+                            top_x_greatest_hits_dict = top_x_greatest_hits(sorted_clusters_target_species_hits_list, top_x_tfs_count)
+
+                            # plot the top x target_species hits
+                            if len(top_x_greatest_hits_dict) > 0:
+                                plot_promoter(target_species, transcript_id, species_group, alignment, alignment_len, promoter_before_tss, promoter_after_tss, transcript_name, top_x_greatest_hits_dict, target_dir, converted_reg_dict, converted_gerps_in_promoter, cpg_list, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls)
+
+            total_time_end = time.time()
+            logging.info(" ".join(["Total time for", str(len(args_lists)), "transcripts:", str(total_time_end - total_time_start), "seconds"]) + "\n\n")
 
     else:
         print "System does not appear to be connected to the internet.  Exiting TFBS_footprinter."
