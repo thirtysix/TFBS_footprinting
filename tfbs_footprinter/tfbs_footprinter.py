@@ -1008,8 +1008,25 @@ def unaligned2aligned_indexes(cleaned_aligned_filename):
     return unaligned2aligned_index_dict
 
 
-##def find_clusters(ens_gene_id, chr_start, chr_end, alignment, target_species, chromosome, tfbss_found_dict, cleaned_aligned_filename, converted_gerps_in_promoter, gerp_conservation_weight_dict, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, TF_cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_keys_dict, cage_correlations_dict, cage_corr_weights_dict, gtex_variants, gene_len):
-##def find_clusters(ens_gene_id, chr_start, chr_end, alignment, target_species, chromosome, tfbss_found_dict, cleaned_aligned_filename, converted_gerps_in_promoter, gerp_conservation_weight_dict, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, TF_cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, jasparTFs_transcripts_dict, cage_correlations_dict, cage_corr_weights_dict, gtex_variants, gene_len):
+def calcCombinedAffinityPvalue(combined_affinity_score, cas_pvalues_dict, cass_with_pvalues_sorted, cass_sorted, cas_pvalues_subdict):
+    """
+    Calculate the pvalue for this combined affinity score.
+    """
+
+    # determine the pvalue of the current combined affinity score
+    if combined_affinity_score in cas_pvalues_subdict:
+        combined_affinity_score_pvalue = str(cas_pvalues_subdict[combined_affinity_score])
+    else:
+        # index the current combined affinity score in the sorted list of scores (keys)
+        cass_with_pvalues_sorted_index = bisect_left(cass_sorted, combined_affinity_score)
+        if cass_with_pvalues_sorted_index>0:
+            combined_affinity_score_pvalue = str(cass_with_pvalues_sorted[cass_with_pvalues_sorted_index][1])
+        else:
+            combined_affinity_score_pvalue = ">"+str(cass_with_pvalues_sorted[0][1])
+
+    return combined_affinity_score_pvalue
+
+                
 def find_clusters(gene_name, ens_gene_id, chr_start, chr_end, alignment, target_species, chromosome, tfbss_found_dict, cleaned_aligned_filename, converted_gerps_in_promoter, gerp_conservation_weight_dict, converted_cages, converted_metaclusters_in_promoter, converted_atac_seqs_in_promoter, converted_eqtls, gtex_weights_dict, transcript_id, cage_dict, TF_cage_dict, cage_dist_weights_dict, atac_dist_weights_dict, metacluster_overlap_weights_dict, cpg_list, cpg_obsexp_weights_dict, cpg_obsexp_weights_dict_keys, cage_correlations_dict, cage_corr_weights_dict, gtex_variants, gene_len, cas_pvalues_dict):
     """
     For each target species hit:
@@ -1022,9 +1039,12 @@ def find_clusters(gene_name, ens_gene_id, chr_start, chr_end, alignment, target_
     cluster_dict = {}
     
     for tf_name, hits in tfbss_found_dict.iteritems():
-        cass_with_pvalues_sorted = cas_pvalues_dict[tf_name]
-        cass_sorted = [x[0] for x in cass_with_pvalues_sorted]
-        cas_pvalues_subdict = {x[0]:x[1] for x in cass_with_pvalues_sorted}
+
+        # build dict and sorted list of pre-computed combined affinity scores for this tf
+        if tf_name in cas_pvalues_dict:
+            cass_with_pvalues_sorted = cas_pvalues_dict[tf_name]
+            cass_sorted = [x[0] for x in cass_with_pvalues_sorted]
+            cas_pvalues_subdict = {x[0]:x[1] for x in cass_with_pvalues_sorted}
         
         if len(hits) > 0:
             cluster_dict[tf_name] = []
@@ -1046,6 +1066,7 @@ def find_clusters(gene_name, ens_gene_id, chr_start, chr_end, alignment, target_
                 tf_len = len(hit[0])
 
                 # datasets only available for homo sapiens
+                # todo: build within function checking
                 if target_species == "homo_sapiens":
                     cage_weights_sum = cage_weights_summing(transcript_id, target_species_hit, cage_dist_weights_dict, converted_cages)
                     eqtls_weights_sum = eqtls_weights_summing(eqtl_occurrence_log_likelihood, ens_gene_id, target_species_hit, converted_eqtls, gtex_weights_dict, chr_start, chr_end, gtex_variants, tf_len, gene_len)
@@ -1059,22 +1080,13 @@ def find_clusters(gene_name, ens_gene_id, chr_start, chr_end, alignment, target_
                 # calculate the complete score (combined affinity)
                 experimental_weights = [species_weights_sum, cage_weights_sum, eqtls_weights_sum, atac_weights_sum, metacluster_weights_sum, cpg_weight, corr_weight_sum]
                 combined_affinity_score += sum(experimental_weights) + target_species_pwm_score
-                combined_affinity_score = round(combined_affinity_score, 2)
+                combined_affinity_score = round(combined_affinity_score, 2)                
 
-                if len(cas_pvalues_dict) > 0:
-                    # determine the pvalue of the current combined affinity score
-                    if combined_affinity_score in cas_pvalues_subdict:
-                        combined_affinity_score_pvalue = str(cas_pvalues_subdict[combined_affinity_score])
-                    else:
-                        # index the current combined affinity score in the sorted list of scores (keys)
-                        cass_with_pvalues_sorted_index = bisect_left(cass_sorted, combined_affinity_score)
-                        if cass_with_pvalues_sorted_index>0:
-                            combined_affinity_score_pvalue = str(cass_with_pvalues_sorted[cass_with_pvalues_sorted_index][1])
-                        else:
-                            combined_affinity_score_pvalue = ">"+str(cass_with_pvalues_sorted[0][1])
+                if tf_name in cas_pvalues_dict:
+                    combined_affinity_score_pvalue = calcCombinedAffinityPvalue(combined_affinity_score, cas_pvalues_dict, cass_with_pvalues_sorted, cass_sorted, cas_pvalues_subdict)
                 else:
                     combined_affinity_score_pvalue = ""
-
+                
                 # append the combined affinity score and its pvalue
                 hit.append(combined_affinity_score)
                 hit.append(combined_affinity_score_pvalue)
