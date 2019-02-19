@@ -144,7 +144,7 @@ def get_args():
             
             for i, parsed_arg_line in enumerate(parsed_arg_lines):
                 if len(parsed_arg_line) < 6:
-                    print "Incomplete arguments in input file on line", i
+                    print("Incomplete arguments in input file on line", i)
                     
                 else:
                     transcript_id, target_tfs_filename, promoter_before_tss, promoter_after_tss, top_x_tfs_count, pval = parsed_arg_line
@@ -153,27 +153,27 @@ def get_args():
                     try:
                         promoter_before_tss = int(promoter_before_tss)
                     except:
-                        print "Entered promoter before TSS", promoter_before_tss, "in line", i, "is not an integer.  Defaulting to 900."
+                        print("Entered promoter before TSS", promoter_before_tss, "in line", i, "is not an integer.  Defaulting to 900.")
                         promoter_before_tss = 900
 
                     try:
                         promoter_after_tss = int(promoter_after_tss)
                     except:
-                        print "Entered promoter after TSS", promoter_after_tss, "in line", i, "is not an integer.  Defaulting to 100."
+                        print("Entered promoter after TSS", promoter_after_tss, "in line", i, "is not an integer.  Defaulting to 100.")
                         promoter_after_tss = 100
 
                     # top_x_tfs_count
                     try:
                         top_x_tfs_count = int(top_x_tfs_count)
                     except:
-                        print "Entered top x tfs count", top_x_tfs_count, "in line", i, "is not an integer.  Defaulting to 10."
+                        print("Entered top x tfs count", top_x_tfs_count, "in line", i, "is not an integer.  Defaulting to 10.")
                         top_x_tfs_count = 10
 
                     # p-value
                     try:
                         pval = float(pval)
                     except:
-                        print "Entered p-value threshold", pval, "in line", i, "is not float.  Defaulting to 0.01."
+                        print("Entered p-value threshold", pval, "in line", i, "is not float.  Defaulting to 0.01.")
                         pval = 0.01
 
                     # update exp data
@@ -301,7 +301,7 @@ def ensemblrest(query_type, options, output_type, ensembl_id=None, log=False):
             except:
                 logging.info(" ".join(["Ensembl REST query unsuccessful, attempt:", "/".join([str(try_count), str(max_tries)]), "Sleeping:", str(fail_sleep_time), "seconds.", full_query]))
                 try_count += 1
-                print " ".join(["Ensembl REST query unsuccessful, attempt:", "/".join([str(try_count), str(max_tries)]), "Sleeping:", str(fail_sleep_time), "seconds.", "See logfile for query."])
+                print(" ".join(["Ensembl REST query unsuccessful, attempt:", "/".join([str(try_count), str(max_tries)]), "Sleeping:", str(fail_sleep_time), "seconds.", "See logfile for query."]))
                 time.sleep(fail_sleep_time)
 
         # return empty decoded_json if max tries has elapsed
@@ -319,7 +319,7 @@ def ensemblrest(query_type, options, output_type, ensembl_id=None, log=False):
             except:    
                 logging.info(" ".join(["Ensembl REST query unsuccessful, attempt:", "/".join([str(try_count), str(max_tries)]), "Sleeping:", str(fail_sleep_time), "seconds.", full_query]))
                 try_count += 1
-                print " ".join(["Ensembl REST query unsuccessful, attempt:", "/".join([str(try_count), str(max_tries)]), "Sleeping:", str(fail_sleep_time), "seconds.", "See logfile for query."])
+                print(" ".join(["Ensembl REST query unsuccessful, attempt:", "/".join([str(try_count), str(max_tries)]), "Sleeping:", str(fail_sleep_time), "seconds.", "See logfile for query."]))
                 time.sleep(fail_sleep_time)
 
         # return empty fasta_content if max tries has elapsed
@@ -416,7 +416,7 @@ def experimentalDataUpdater(exp_data_update):
     if not os.path.exists(experimental_data_dir):
         directory_creator(experimental_data_dir)
         exp_data_update = True
-        print "Data dir doesn't exist"
+        print("Data dir doesn't exist")
 
     # if the data dir exists, check to see that all of the required file patterns are present
     else:
@@ -436,7 +436,7 @@ def experimentalDataUpdater(exp_data_update):
         experimental_data_url = "https://s3.us-east-2.amazonaws.com/tfbssexperimentaldata/data.tar.gz"
         experimental_data_down_loc = os.path.join(script_dir,'data.tar.gz')
 ##        current_versions_file = os.path.join(experimental_data_dir, "experimental_data.current_versions.json")
-        print "Downloading the most current experimental data"
+        print("Downloading the most current experimental data")
         logging.info(" ".join(["Downloading most current experimental data."]))
 
         try:
@@ -467,7 +467,7 @@ def experimentaldata(target_species):
     if not os.path.exists(experimental_data_species_dir): 	
         aws_server = "https://s3.us-east-2.amazonaws.com"
         experimental_data_species_url = "/".join([aws_server, "tfbssexperimentaldata", ".".join([target_species, "tar.gz"])])
-        print experimental_data_species_url
+        print(experimental_data_species_url)
         logging.info("Downloading most current experimental data for %s." %target_species)
 
         try:
@@ -519,7 +519,7 @@ def experimentalDataUpdater_beta():
 
     # download the most current experimental data
     if update_required:
-        print "Downloading the most current experimental data"
+        print("Downloading the most current experimental data")
         logging.info(" ".join(["Downloading most current experimental data."]))
 
         try:
@@ -566,17 +566,6 @@ def species_specific_data(target_species, chromosome, species_specific_data_dir)
         gerp_conservation_weight_dict_filename = gerp_conservation_weight_dict_filenames[-1]
         gerp_conservation_weight_dict = load_msgpack(gerp_conservation_weight_dict_filename)
 
-##    # load human CAGE locs occuring near promoters
-##    cage_dict = {}
-##    cage_data_dir = os.path.join(species_specific_data_dir, "cage_data")
-##    if os.path.exists(cage_data_dir):
-##        cage_dict_filename = os.path.join(cage_data_dir, ".".join(["homo_sapiens", "CAGE", "Chr"+chromosome.upper(), "2000", "promoters", "genomic_coords", "msg"]))
-##        if os.path.exists(cage_dict_filename):
-##            cage_dict = load_msgpack(cage_dict_filename)
-##            print "cage_dict exists"
-##            print "len(cage_dict):", len(cage_dict)
-##            print cage_dict.keys()[:10]
-
     # load human CAGEs-Genes associated dict
     cage_dict = {}
     cage_data_dir = os.path.join(species_specific_data_dir, "cage_data")
@@ -592,8 +581,6 @@ def species_specific_data(target_species, chromosome, species_specific_data_dir)
         TF_cage_dict_filename = os.path.join(cage_data_dir, ".".join(["homo_sapiens", "CAGE", "jasparTFs", "dict", "json"]))
         if os.path.exists(TF_cage_dict_filename):
             TF_cage_dict = load_json(TF_cage_dict_filename)
-        else:
-            print "TF_cage_dict not loaded"
 
     # load CAGE dist weights
     cage_dist_weights_dict = {}
@@ -612,7 +599,7 @@ def species_specific_data(target_species, chromosome, species_specific_data_dir)
         if os.path.exists(cage_correlations_dict_filename):
             cage_correlations_dict = load_msgpack(cage_correlations_dict_filename)
         else:
-            print "cage_correlations_dict not loaded"
+            print("cage_correlations_dict not loaded")
 ##        cage_correlations_dict_filenames = [os.path.join(cage_corr_data_dir, x) for x in os.listdir(cage_corr_data_dir) if "rekeyed_combined_cage_corr_dict" in x and target_species in x]
 ##        if len(cage_correlations_dict_filenames) > 0:
 ##            cage_correlations_dict_filenames.sort()
@@ -627,7 +614,7 @@ def species_specific_data(target_species, chromosome, species_specific_data_dir)
             cage_corr_weights_dict = load_json(cage_corr_weights_dict_filename)
             cage_corr_weights_dict = {float(k):v for k,v in cage_corr_weights_dict.iteritems()}
         else:
-            print "cage_corr_weights_dict not loaded"
+            print("cage_corr_weights_dict not loaded")
             
 ##        cage_corr_weights_dict_filenames = [os.path.join(cage_data_dir, x) for x in os.listdir(cage_data_dir) if "cage_corr_weights" in x and target_species in x]
 ##        if len(cage_corr_weights_dict_filenames) > 0:
@@ -1074,16 +1061,19 @@ def find_clusters(gene_name, ens_gene_id, chr_start, chr_end, alignment, target_
                 combined_affinity_score += sum(experimental_weights) + target_species_pwm_score
                 combined_affinity_score = round(combined_affinity_score, 2)
 
-                # determine the pvalue of the current combined affinity score
-                if combined_affinity_score in cas_pvalues_subdict:
-                    combined_affinity_score_pvalue = str(cas_pvalues_subdict[combined_affinity_score])
-                else:
-                    # index the current combined affinity score in the sorted list of scores (keys)
-                    cass_with_pvalues_sorted_index = bisect_left(cass_sorted, combined_affinity_score)
-                    if cass_with_pvalues_sorted_index>0:
-                        combined_affinity_score_pvalue = str(cass_with_pvalues_sorted[cass_with_pvalues_sorted_index][1])
+                if len(cas_pvalues_dict) > 0:
+                    # determine the pvalue of the current combined affinity score
+                    if combined_affinity_score in cas_pvalues_subdict:
+                        combined_affinity_score_pvalue = str(cas_pvalues_subdict[combined_affinity_score])
                     else:
-                        combined_affinity_score_pvalue = ">"+str(cass_with_pvalues_sorted[0][1])
+                        # index the current combined affinity score in the sorted list of scores (keys)
+                        cass_with_pvalues_sorted_index = bisect_left(cass_sorted, combined_affinity_score)
+                        if cass_with_pvalues_sorted_index>0:
+                            combined_affinity_score_pvalue = str(cass_with_pvalues_sorted[cass_with_pvalues_sorted_index][1])
+                        else:
+                            combined_affinity_score_pvalue = ">"+str(cass_with_pvalues_sorted[0][1])
+                else:
+                    combined_affinity_score_pvalue = ""
 
                 # append the combined affinity score and its pvalue
                 hit.append(combined_affinity_score)
@@ -1099,144 +1089,6 @@ def find_clusters(gene_name, ens_gene_id, chr_start, chr_end, alignment, target_
     logging.info(" ".join(["total time for find_clusters() for this transcript:", str(total_time), "seconds"]))
     
     return cluster_dict
-
-
-##def alignment_info_content(aligned_filename):
-##    """
-##    DEPRECATED: Now using GERP scores for conservation analysis.
-##    The BioPython alignInfo.information_content module is slow,
-##    and uses generic nucleotide frequencies (C,G = 0.4; A,T = 0.1).
-##    Identify information content (IC) of all locations in the alignment.
-##    This dictionary of ICs can then be used for putative TFBSs.
-##    *FIX: Use an existing cleaned alignment object instead of reading from file.
-##    """
-##
-##    bg_nuc_freq_dict = {'A':0.292, 'C':0.207, 'G':0.207, 'T':0.292}
-##    alignment = AlignIO.read(aligned_filename, "fasta")
-##    target_species_row = alignment[0]
-##    info_content_dict = {}
-##    pseudo_count = 1
-##
-##    for i in range(0, len(target_species_row)):   
-##        alignment_col = alignment[:,i]
-##        char_counts = collections.Counter(alignment_col)
-##        chars_count = float(sum(char_counts.values()))
-##        info_content = sum([((char_count+pseudo_count)/chars_count) * math.log(((char_count+pseudo_count)/chars_count)/bg_nuc_freq_dict[char]) for char, char_count in char_counts.iteritems() if char in "ACGT"])
-##        info_content_dict[i] = info_content
-##    
-##    return info_content_dict
-
-
-##def alignment_summary(alignment):
-##    """
-##    DEPRECATED: Now using GERP scores for conservation analysis.
-##    DEPRECATED: Now using alignment_info_content().
-##    Uses Biopython's information_content module, which is very slow.
-##    The current implementation replaces the previous one which called this
-##    function for every putative TFBS, which can greatly outnumber the length of the
-##    alignment if the p-value threshold is set low.  Current implementation scores
-##    the whole alignment at the beginning and stores IC content to a dict.
-##    Build an alignment object.  Generate an alignment summary.
-##    Score for information content at each position in the alignment.
-##    """
-##
-##    # build alignment for analysis of conservation via information content
-##    if len(alignment) > 1:
-##        msl_list = []
-##        for entry in alignment:
-##            record = SeqRecord(Seq(entry['seq'], alphabet = generic_dna), id = entry['species'], description = "")
-##            msl_list.append(record)
-##
-##        # Generate an alignment summary.
-##        msl = MultipleSeqAlignment(msl_list)
-##        msl_summary = AlignInfo.SummaryInfo(msl)
-##
-##    else:
-##        msl_summary = None
-##    
-##    # Score for information content at each position in the alignment. 
-##    info_content_dict = {}
-##    if msl_summary != None:
-##        for i in range(0, len(alignment[0]['seq'])-1):
-####            if i%100 ==0:
-####                print i
-##            info_content = msl_summary.information_content(i, i+1, chars_to_ignore = ['N'])
-##            info_content_dict[i] = info_content        
-##
-##    return info_content_dict
-
-
-##def conservation_information_content(target_species_hit, info_content_dict):
-##    """
-##    DEPRECATED: Now using GERP scores for conservation analysis.
-##    Sum pre-calculated values, for the information content at each location
-##    in the alignment, across for this location in the alignment.
-##    """
-##
-##    if len(info_content_dict) != 0:
-##        start = target_species_hit[4]
-##        end = target_species_hit[5]
-##
-##        info_content = sum([info_content_dict[x] for x in range(start, end)])
-##
-##    else:
-##        info_content = 0
-##
-##    return info_content
-    
-
-##def alignment_summary(alignment):
-##    """
-##    Build an alignment object.  Generate an alignment summary.
-##    """
-##
-##    if len(alignment) > 1:
-##        # build alignment for analysis of conservation via information content
-##        msl_list = []
-##        for entry in alignment:
-##            record = SeqRecord(Seq(entry['seq'], alphabet = generic_dna), id = entry['species'], description = "")
-##            msl_list.append(record)
-##
-##        msl = MultipleSeqAlignment(msl_list)
-##        msl_summary = AlignInfo.SummaryInfo(msl)
-##
-##    else:
-##        msl_summary = None
-##
-##    return msl_summary
-##        
-##
-##def conservation_information_content(target_species_hit, msl_summary):
-##    """
-##    For the target hit, extract the slice of the alignment where it occurs and
-##    calculate the information content.
-##    """
-##
-####    if len(alignment) > 1:
-####        # build alignment for analysis of conservation via information content
-####        msl_list = []
-####        for entry in alignment:
-####            record = SeqRecord(Seq(entry['seq'], alphabet = generic_dna), id = entry['species'], description = "")
-####            msl_list.append(record)
-####
-####        msl = MultipleSeqAlignment(msl_list)
-####        msl_summary = AlignInfo.SummaryInfo(msl)
-##        # extract location of this predicted binding site
-##    ##    target_species_hit = cluster[0]
-##    ##    target_species_hit = hit
-##
-##    if msl_summary != None:
-##        start = target_species_hit[4]
-##        end = target_species_hit[5]
-##
-##        print msl_summary
-##        info_content = msl_summary.information_content(start, end, chars_to_ignore = ['N'])
-##
-##    else:
-##        info_content = 0
-##
-##    return info_content
-##    
 
 
 def eqtl_overlap_likelihood(converted_eqtls, chr_start, chr_end, tf_len, gene_len, gtex_variants, ens_gene_id):
@@ -1388,31 +1240,15 @@ def cage_weights_summing(transcript_id, target_species_hit, cage_dist_weights_di
 
     cage_weights = []
 
-    # ref-point
-##    if transcript_id in cage_dict:
-##    motif_start = target_species_hit[5]
-##    motif_end = target_species_hit[6]
-##    motif_midpoint = (motif_end + motif_start)/2
-##    motif_midpoint = (target_species_hit[5] + target_species_hit[6])/2
-    
+    # ref-point    
     for converted_cage in converted_cages:
-##        transcript_cage_start = converted_cage[0]
-##        transcript_cage_end = converted_cage[1]
-##        cage_midpoint = (transcript_cage_start + transcript_cage_end)/2
-
-##        cage_midpoint = (converted_cage[0] + converted_cage[1])/2        
-##        motif_cage_dist = str(abs(motif_midpoint - cage_midpoint))
         cage_peak_count_ratio = converted_cage[3]
         motif_cage_dist = str(distance_solve([converted_cage[0], converted_cage[1]], [target_species_hit[4], target_species_hit[5]]))
         
         if motif_cage_dist in cage_dist_weights_dict:
             cage_weight = cage_dist_weights_dict[motif_cage_dist]
             cage_weight_peak_count_ratio_adjusted = cage_weight * cage_peak_count_ratio
-            cage_weights.append(cage_weight_peak_count_ratio_adjusted)              
-
-##    print "target_species_hit", target_species_hit
-##    print "cage_weights", cage_weights
-    
+            cage_weights.append(cage_weight_peak_count_ratio_adjusted)                  
     
     cage_weights_sum = sum(cage_weights)
 
@@ -1429,14 +1265,10 @@ def atac_weights_summing(transcript_id, target_species_hit, atac_dist_weights_di
     
     motif_start = target_species_hit[4]
     motif_end = target_species_hit[5]
-##    motif_midpoint = (motif_end + motif_start)/2
     
     for converted_atac in converted_atac_seqs_in_promoter:            
         transcript_atac_start = converted_atac[0]
         transcript_atac_end = converted_atac[1]
-##        atac_midpoint = (transcript_atac_start + transcript_atac_end)/2
-
-##        motif_atac_dist = str(abs(motif_midpoint - atac_midpoint))
         motif_atac_dist = str(distance_solve([motif_start, motif_end],[transcript_atac_start, transcript_atac_end]))
         
         if motif_atac_dist in atac_dist_weights_dict:
@@ -1446,37 +1278,6 @@ def atac_weights_summing(transcript_id, target_species_hit, atac_dist_weights_di
     atac_weights_sum = sum(atac_weights)
 
     return atac_weights_sum
-
-
-##def metacluster_weights_summing(transcript_id, target_species_hit, metacluster_dist_weights_dict, converted_metaclusters_in_promoter):
-##    """
-##    Generate a log-likelihood score for a putative TFBS based on the distances
-##    to the nearest metaclusters.
-##    """
-##
-##
-##    metacluster_weights = []
-##
-####    if transcript_id in metacluster_dict:
-####        transcript_metaclusters = metacluster_dict[transcript_id]        
-##    motif_start = target_species_hit[6]
-##    motif_end = target_species_hit[7]
-##    motif_midpoint = (motif_end + motif_start)/2
-##    
-##    for converted_metacluster in converted_metaclusters_in_promoter:            
-##        transcript_metacluster_start = converted_metacluster[0]
-##        transcript_metacluster_end = converted_metacluster[1]
-##        metacluster_midpoint = (transcript_metacluster_start + transcript_metacluster_end)/2
-##
-##        motif_metacluster_dist = str(abs(motif_midpoint - metacluster_midpoint))
-##        
-##        if motif_metacluster_dist in metacluster_dist_weights_dict:
-##            metacluster_weight = metacluster_dist_weights_dict[motif_metacluster_dist]
-##            metacluster_weights.append(metacluster_weight)              
-##
-##    metacluster_weights_sum = sum(metacluster_weights)
-##
-##    return metacluster_weights_sum
 
 
 def metacluster_weights_summing(transcript_id, target_species_hit, metacluster_overlap_weights_dict, converted_metaclusters_in_promoter):
@@ -1497,7 +1298,6 @@ def metacluster_weights_summing(transcript_id, target_species_hit, metacluster_o
         transcript_metacluster_end = converted_metacluster[1]
 
         # doesn't work clusters are bigger than motifs
-##        if transcript_metacluster_start<=motif_start<=transcript_metacluster_end or transcript_metacluster_start<=motif_end<=transcript_metacluster_end:
         overlap = overlap_range([motif_start, motif_end], [transcript_metacluster_start, transcript_metacluster_end])
         if len(overlap)>0:
             num_ovelapping_metaclusters += 1
@@ -1505,7 +1305,7 @@ def metacluster_weights_summing(transcript_id, target_species_hit, metacluster_o
     if num_ovelapping_metaclusters in metacluster_overlap_weights_dict:
         metacluster_weights_sum = metacluster_overlap_weights_dict[num_ovelapping_metaclusters]
     else:
-        print "metacluster overlap sum not in weight dict"
+        print("metacluster overlap sum not in weight dict")
         logging.warning(" ".join(["metacluster overlap sum not in weight dict"]))
 
     return metacluster_weights_sum
@@ -1626,10 +1426,11 @@ def target_species_hits_table_writer(sorted_clusters_target_species_hits_list, o
         for hit in sorted_clusters_target_species_hits_list:
             frame_score_pval_str = hit[8]
             combined_affinity_score_pval_str = hit[10]
-            if ">" not in frame_score_pval_str:
+                
+            if ">" not in frame_score_pval_str and frame_score_pval_str != "":
                 if float(frame_score_pval_str) <= 0.0001:
                     hit[8] = "{0:.3e}".format(Decimal(frame_score_pval_str))
-            if ">" not in combined_affinity_score_pval_str:
+            if ">" not in combined_affinity_score_pval_str and combined_affinity_score_pval_str != "":
                 if float(combined_affinity_score_pval_str) <= 0.0001:
                     hit[10] = "{0:.3e}".format(Decimal(combined_affinity_score_pval_str))
             
@@ -2843,7 +2644,7 @@ def main():
                 
             for i, args_list in enumerate(args_lists):
                 args, transcript_ids_filename, transcript_id, target_tfs_filename, promoter_before_tss, promoter_after_tss, top_x_tfs_count, pval = args_list
-                print "Ensembl transcript id:", transcript_id
+                print("Ensembl transcript id:", transcript_id)
                 logging.info(" ".join(["***ANALYSIS OF A NEW TRANSCRIPT HAS BEGUN:", transcript_id]))
                 logging.info(" ".join(["Arguments used in this run:", str(args_list)]))
 
@@ -2959,4 +2760,4 @@ def main():
             logging.info(" ".join(["Total time for", str(len(args_lists)), "transcripts:", str(total_time_end - total_time_start), "seconds"]) + "\n\n")
 
     else:
-        print "System does not appear to be connected to the internet.  Exiting TFBS_footprinter."
+        print("System does not appear to be connected to the internet.  Exiting TFBS_footprinter.")
